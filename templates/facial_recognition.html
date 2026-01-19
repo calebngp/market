@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reconocimiento Facial - Market</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --accent: #00d9ff;
+            --accent-glow: rgba(0, 217, 255, 0.3);
+            --accent-secondary: #ff6b35;
+            --text-primary: #ffffff;
+            --text-secondary: #8b8b9e;
+            --border: #2a2a3a;
+            --success: #00ff88;
+            --error: #ff4757;
+            --warning: #ffaa00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(ellipse at 30% 20%, rgba(0, 217, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(255, 107, 53, 0.05) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 40px;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .nav-brand span {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: var(--accent);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .page-title h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-title p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .facial-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .facial-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 25px 30px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .panel-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .panel-body {
+            padding: 30px;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #video-register,
+        #video-recognize {
+            width: 100%;
+            display: block;
+        }
+
+        #canvas-register,
+        #canvas-recognize {
+            display: none;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            color: var(--text-primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 217, 255, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        .status-message.success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .status-message.error {
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .status-message.info {
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .user-info {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .user-info.show {
+            display: block;
+        }
+
+        .user-info h3 {
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+
+        .user-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .user-info-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-info-label {
+            color: var(--text-secondary);
+        }
+
+        .user-info-value {
+            font-weight: 600;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: var(--text-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--warning);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+
+    <nav class="navbar">
+        <a href="/" class="nav-brand">
+            <span>🛒 Market</span>
+        </a>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Inicio</a>
+            <a href="/scanner" class="nav-link">Escáner</a>
+            <a href="/inventory" class="nav-link">Inventario</a>
+            <a href="/facial-recognition" class="nav-link" style="color: var(--accent);">Reconocimiento Facial</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-title">
+            <h1>👤 Reconocimiento Facial</h1>
+            <p>Registra y reconoce usuarios mediante reconocimiento facial</p>
+        </div>
+
+        <div class="facial-layout">
+            <!-- Panel de Registro -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>📝 Registrar Rostro</h2>
+                </div>
+                <div class="panel-body">
+                    <div class="video-container">
+                        <video id="video-register" autoplay playsinline></video>
+                        <canvas id="canvas-register"></canvas>
+                        <div class="video-overlay">
+                            <span id="status-register">Preparando cámara...</span>
+                        </div>
+                    </div>
+
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="user-select">Seleccionar Usuario</label>
+                            <select id="user-select" required>
+                                <option value="">-- Selecciona un usuario --</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.nombre }} (ID: {{ user.id }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" id="start-camera-register">
+                                🎥 Iniciar Cámara
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="stop-camera-register" disabled>
+                                ⏹️ Detener Cámara
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="register-face-btn" disabled>
+                                💾 Registrar Rostro
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="register-status" class="status-message"></div>
+                </div>
+            </div>
+
+            <!-- Panel de Reconocimiento -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>🔍 Reconocer Usuario</h2>
+                </div>
+                <div class="panel-body">
+                    <div class="video-container">
+                        <video id="video-recognize" autoplay playsinline></video>
+                        <canvas id="canvas-recognize"></canvas>
+                        <div class="video-overlay">
+                            <span id="status-recognize">Preparando cámara...</span>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-secondary" id="start-camera-recognize">
+                            🎥 Iniciar Cámara
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="stop-camera-recognize" disabled>
+                            ⏹️ Detener Cámara
+                        </button>
+                        <button type="button" class="btn btn-primary" id="recognize-face-btn" disabled>
+                            🔍 Reconocer
+                        </button>
+                    </div>
+
+                    <div id="recognize-status" class="status-message"></div>
+
+                    <div id="user-info" class="user-info">
+                        <h3>👤 Usuario Reconocido</h3>
+                        <div class="user-info-item">
+                            <span class="user-info-label">ID:</span>
+                            <span class="user-info-value" id="info-id">-</span>
+                        </div>
+                        <div class="user-info-item">
+                            <span class="user-info-label">Nombre:</span>
+                            <span class="user-info-value" id="info-nombre">-</span>
+                        </div>
+                        <div class="user-info-item">
+                            <span class="user-info-label">Puntos:</span>
+                            <span class="user-info-value" id="info-puntos">-</span>
+                        </div>
+                        <div class="user-info-item">
+                            <span class="user-info-label">Precisión:</span>
+                            <span class="user-info-value" id="info-distance">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let streamRegister = null;
+        let streamRecognize = null;
+
+        // Elementos del DOM
+        const videoRegister = document.getElementById('video-register');
+        const canvasRegister = document.getElementById('canvas-register');
+        const videoRecognize = document.getElementById('video-recognize');
+        const canvasRecognize = document.getElementById('canvas-recognize');
+        const statusRegister = document.getElementById('status-register');
+        const statusRecognize = document.getElementById('status-recognize');
+
+        // Botones de registro
+        const startCameraRegister = document.getElementById('start-camera-register');
+        const stopCameraRegister = document.getElementById('stop-camera-register');
+        const registerFaceBtn = document.getElementById('register-face-btn');
+        const registerForm = document.getElementById('register-form');
+        const registerStatus = document.getElementById('register-status');
+
+        // Botones de reconocimiento
+        const startCameraRecognize = document.getElementById('start-camera-recognize');
+        const stopCameraRecognize = document.getElementById('stop-camera-recognize');
+        const recognizeFaceBtn = document.getElementById('recognize-face-btn');
+        const recognizeStatus = document.getElementById('recognize-status');
+        const userInfo = document.getElementById('user-info');
+
+        // Funciones para manejar la cámara de registro
+        startCameraRegister.addEventListener('click', async () => {
+            try {
+                streamRegister = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' } 
+                });
+                videoRegister.srcObject = streamRegister;
+                statusRegister.textContent = 'Cámara activa - Posiciona tu rostro';
+                startCameraRegister.disabled = true;
+                stopCameraRegister.disabled = false;
+                registerFaceBtn.disabled = false;
+            } catch (error) {
+                showStatus(registerStatus, 'error', 'Error al acceder a la cámara: ' + error.message);
+            }
+        });
+
+        stopCameraRegister.addEventListener('click', () => {
+            if (streamRegister) {
+                streamRegister.getTracks().forEach(track => track.stop());
+                streamRegister = null;
+                videoRegister.srcObject = null;
+                statusRegister.textContent = 'Cámara detenida';
+                startCameraRegister.disabled = false;
+                stopCameraRegister.disabled = true;
+                registerFaceBtn.disabled = true;
+            }
+        });
+
+        // Funciones para manejar la cámara de reconocimiento
+        startCameraRecognize.addEventListener('click', async () => {
+            try {
+                streamRecognize = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' } 
+                });
+                videoRecognize.srcObject = streamRecognize;
+                statusRecognize.textContent = 'Cámara activa - Posiciona tu rostro';
+                startCameraRecognize.disabled = true;
+                stopCameraRecognize.disabled = false;
+                recognizeFaceBtn.disabled = false;
+            } catch (error) {
+                showStatus(recognizeStatus, 'error', 'Error al acceder a la cámara: ' + error.message);
+            }
+        });
+
+        stopCameraRecognize.addEventListener('click', () => {
+            if (streamRecognize) {
+                streamRecognize.getTracks().forEach(track => track.stop());
+                streamRecognize = null;
+                videoRecognize.srcObject = null;
+                statusRecognize.textContent = 'Cámara detenida';
+                startCameraRecognize.disabled = false;
+                stopCameraRecognize.disabled = true;
+                recognizeFaceBtn.disabled = true;
+                userInfo.classList.remove('show');
+            }
+        });
+
+        // Capturar frame del video
+        function captureFrame(video, canvas) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            return canvas.toDataURL('image/jpeg', 0.8);
+        }
+
+        // Registrar rostro
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userId = document.getElementById('user-select').value;
+            if (!userId) {
+                showStatus(registerStatus, 'error', 'Por favor selecciona un usuario');
+                return;
+            }
+
+            if (!streamRegister) {
+                showStatus(registerStatus, 'error', 'Por favor inicia la cámara primero');
+                return;
+            }
+
+            registerFaceBtn.disabled = true;
+            registerFaceBtn.innerHTML = '<span class="loading"></span> Registrando...';
+
+            try {
+                const imageData = captureFrame(videoRegister, canvasRegister);
+                
+                const response = await fetch('/api/facial/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        image: imageData
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus(registerStatus, 'success', result.message);
+                } else {
+                    showStatus(registerStatus, 'error', result.message);
+                }
+            } catch (error) {
+                showStatus(registerStatus, 'error', 'Error al registrar: ' + error.message);
+            } finally {
+                registerFaceBtn.disabled = false;
+                registerFaceBtn.innerHTML = '💾 Registrar Rostro';
+            }
+        });
+
+        // Reconocer rostro
+        recognizeFaceBtn.addEventListener('click', async () => {
+            if (!streamRecognize) {
+                showStatus(recognizeStatus, 'error', 'Por favor inicia la cámara primero');
+                return;
+            }
+
+            recognizeFaceBtn.disabled = true;
+            recognizeFaceBtn.innerHTML = '<span class="loading"></span> Reconociendo...';
+
+            try {
+                const imageData = captureFrame(videoRecognize, canvasRecognize);
+                
+                const response = await fetch('/api/facial/recognize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image: imageData,
+                        tolerance: 0.6
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.user) {
+                    showStatus(recognizeStatus, 'success', result.message);
+                    document.getElementById('info-id').textContent = result.user.id;
+                    document.getElementById('info-nombre').textContent = result.user.nombre;
+                    document.getElementById('info-puntos').textContent = result.user.puntos.toLocaleString();
+                    document.getElementById('info-distance').textContent = 
+                        `Distancia: ${result.distance.toFixed(3)}`;
+                    userInfo.classList.add('show');
+                } else {
+                    showStatus(recognizeStatus, 'error', result.message);
+                    userInfo.classList.remove('show');
+                }
+            } catch (error) {
+                showStatus(recognizeStatus, 'error', 'Error al reconocer: ' + error.message);
+                userInfo.classList.remove('show');
+            } finally {
+                recognizeFaceBtn.disabled = false;
+                recognizeFaceBtn.innerHTML = '🔍 Reconocer';
+            }
+        });
+
+        // Función para mostrar mensajes de estado
+        function showStatus(element, type, message) {
+            element.textContent = message;
+            element.className = `status-message show ${type}`;
+            setTimeout(() => {
+                element.classList.remove('show');
+            }, 5000);
+        }
+
+        // Limpiar streams al cerrar la página
+        window.addEventListener('beforeunload', () => {
+            if (streamRegister) {
+                streamRegister.getTracks().forEach(track => track.stop());
+            }
+            if (streamRecognize) {
+                streamRecognize.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>

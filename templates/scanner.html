@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -302,6 +303,24 @@
             font-weight: 400;
         }
 
+        .product-points {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-top: 15px;
+            padding: 12px 20px;
+            background: rgba(0, 217, 255, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 217, 255, 0.3);
+        }
+
+        .points-icon {
+            font-size: 1.8rem;
+        }
+
         .product-details {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -468,6 +487,345 @@
         .last-scan .code {
             font-family: 'JetBrains Mono', monospace;
             font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            transition: color 0.3s ease;
+        }
+
+        .last-scan .code:hover {
+            color: var(--accent);
+        }
+
+        /* Scanned Products History */
+        .scanned-products-history {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid var(--border);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .history-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .history-item:hover {
+            border-color: var(--accent);
+            transform: translateX(5px);
+        }
+
+        .history-item.active {
+            border-color: var(--accent);
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .history-item-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .history-item-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+
+        .history-item-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+
+        .history-item-price {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .history-item-points {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .clear-history-btn {
+            padding: 8px 16px;
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            border-radius: 8px;
+            color: var(--error);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .clear-history-btn:hover {
+            background: rgba(255, 71, 87, 0.2);
+        }
+
+        /* User Points Display */
+        .user-points-display {
+            margin-top: 20px;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 217, 255, 0.05));
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 12px;
+        }
+
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .user-points {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-points::before {
+            content: '⭐';
+            font-size: 1.5rem;
+        }
+
+        /* Barcode Preview Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            animation: modalIn 0.3s ease;
+            text-align: center;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .modal-header h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 71, 87, 0.2);
+            color: var(--error);
+        }
+
+        .barcode-preview-container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .barcode-preview-container svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .barcode-code-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin: 20px 0;
+            letter-spacing: 3px;
+        }
+
+        .barcode-product-info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .barcode-product-info h4 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .barcode-product-info p {
+            color: var(--text-secondary);
+            margin: 5px 0;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .btn-modal {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-modal-primary {
+            background: linear-gradient(135deg, var(--accent), #00a8cc);
+            color: var(--bg-primary);
+        }
+
+        .btn-modal-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px var(--accent-glow);
+        }
+
+        .btn-modal-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .btn-modal-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Purchase Button */
+        .purchase-section {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-purchase {
+            width: 100%;
+            padding: 18px 24px;
+            background: linear-gradient(135deg, var(--success), #00cc6a);
+            border: none;
+            border-radius: 16px;
+            color: var(--bg-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-purchase:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 255, 136, 0.5);
+        }
+
+        .btn-purchase:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+        }
+
+        .purchase-icon {
+            font-size: 2rem;
+        }
+
+        .purchase-text {
+            font-size: 1.2rem;
+        }
+
+        .purchase-reintegro {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -500,7 +858,15 @@
                     </div>
 
                     <div id="last-scan" class="last-scan">
-                        <span>✅</span> Último código: <span class="code" id="last-code">-</span>
+                        <span>✅</span> Último código: <span class="code" id="last-code" onclick="previewLastBarcode()">-</span>
+                    </div>
+
+                    <!-- User Points Display -->
+                    <div class="user-points-display">
+                        <div class="user-info">
+                            <span class="user-name" id="user-name">Cargando...</span>
+                            <span class="user-points" id="user-points">-</span>
+                        </div>
                     </div>
                     
                     <div class="scanner-controls">
@@ -541,7 +907,7 @@
 
                     <div id="result-container" class="result-container">
                         <div class="barcode-display">
-                            <div class="code" id="result-code">-</div>
+                            <div class="code" id="result-code" style="cursor: pointer;" onclick="previewResultBarcode()">-</div>
                         </div>
 
                         <div class="product-card">
@@ -550,6 +916,10 @@
                             <div class="product-price">
                                 ₲ <span id="result-price">0</span>
                                 <small>PYG</small>
+                            </div>
+                            <div class="product-points">
+                                <span class="points-icon">⭐</span>
+                                <span id="result-points">0</span> puntos
                             </div>
                         </div>
 
@@ -572,6 +942,15 @@
                             </div>
                         </div>
 
+                        <!-- Purchase Button -->
+                        <div class="purchase-section" id="purchase-section" style="display: none;">
+                            <button class="btn-purchase" id="btn-purchase" onclick="purchaseWithPoints()">
+                                <span class="purchase-icon">🛒</span>
+                                <span class="purchase-text">Comprar por Puntos</span>
+                                <span class="purchase-reintegro">+<span id="reintegro-amount">0</span> pts de reintegro</span>
+                            </button>
+                        </div>
+
                         <div class="decoded-info">
                             <h4>Información Decodificada del Código</h4>
                             <div class="decoded-grid">
@@ -589,8 +968,43 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Scanned Products History -->
+                        <div class="scanned-products-history" id="history-section" style="display: none;">
+                            <div class="history-header">
+                                <h3>📋 Productos Escaneados</h3>
+                                <button class="clear-history-btn" onclick="clearHistory()">Limpiar</button>
+                            </div>
+                            <div class="history-list" id="history-list">
+                                <!-- History items will be added here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barcode Preview Modal -->
+    <div class="modal-overlay" id="barcode-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🏷️ Vista Previa del Código de Barras</h3>
+                <button class="modal-close" onclick="closeBarcodeModal()">✕</button>
+            </div>
+            <div class="barcode-preview-container">
+                <svg id="barcode-preview-large"></svg>
+            </div>
+            <div class="barcode-code-display" id="barcode-code-display"></div>
+            <div class="barcode-product-info">
+                <h4 id="barcode-product-name"></h4>
+                <p><strong>Categoría:</strong> <span id="barcode-product-category"></span></p>
+                <p><strong>Precio:</strong> <span id="barcode-product-price"></span></p>
+                <p><strong>Stock:</strong> <span id="barcode-product-stock"></span></p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-modal-secondary" onclick="closeBarcodeModal()">Cerrar</button>
+                <button type="button" class="btn-modal btn-modal-primary" onclick="downloadBarcodePreview()">📥 Descargar</button>
             </div>
         </div>
     </div>
@@ -600,6 +1014,10 @@
         let isScanning = false;
         let lastScannedCode = '';
         let lastScanTime = 0;
+        let currentUser = null;
+        let currentProduct = null;
+        let scannedProductsHistory = [];
+        let activeHistoryIndex = -1;
 
         function updateStatus(scanning) {
             const status = document.getElementById('scan-status');
@@ -681,11 +1099,16 @@
             document.getElementById('last-code').textContent = decodedText;
             document.getElementById('last-scan').classList.add('active');
 
+            // Limpiar campo de entrada manual
+            document.getElementById('manual-code').value = '';
+
             // Buscar producto
             searchProduct(decodedText);
 
             // Sonido de confirmación
             playBeep();
+            
+            // El escáner continúa activo para permitir escanear otro producto
         }
 
         function onScanError(errorMessage) {
@@ -696,10 +1119,14 @@
             const code = document.getElementById('manual-code').value.trim();
             if (code) {
                 searchProduct(code);
+                // El campo se limpia después de mostrar el resultado
+                setTimeout(() => {
+                    document.getElementById('manual-code').value = '';
+                }, 500);
             }
         }
 
-        async function searchProduct(code) {
+        async function searchProduct(code, addToHistory = true) {
             try {
                 const response = await fetch(`/api/product/${code}`);
                 const data = await response.json();
@@ -713,38 +1140,221 @@
                     const product = data.product;
                     const decoded = data.decoded;
                     
-                    document.getElementById('result-code').textContent = product.codigo;
-                    document.getElementById('result-name').textContent = product.nombre;
-                    document.getElementById('result-category').textContent = product.categoria;
-                    document.getElementById('result-price').textContent = formatNumber(product.precio);
-                    document.getElementById('result-country').textContent = product.pais;
-                    document.getElementById('result-supplier').textContent = product.proveedor;
-                    document.getElementById('result-stock').textContent = product.stock + ' unidades';
+                    // Guardar datos del producto para el modal y compra
+                    currentProductData = product;
+                    currentProduct = product;
                     
-                    const stock = parseInt(product.stock);
-                    const statusEl = document.getElementById('result-status');
-                    if (stock > 50) {
-                        statusEl.textContent = '✅ Disponible';
-                        statusEl.style.color = '#00ff88';
-                    } else if (stock > 0) {
-                        statusEl.textContent = '⚠️ Stock bajo';
-                        statusEl.style.color = '#ffaa00';
-                    } else {
-                        statusEl.textContent = '❌ Sin stock';
-                        statusEl.style.color = '#ff4757';
+                    // Agregar al historial si no existe ya
+                    if (addToHistory) {
+                        const existingIndex = scannedProductsHistory.findIndex(p => p.codigo === product.codigo);
+                        if (existingIndex === -1) {
+                            scannedProductsHistory.unshift({
+                                ...product,
+                                decoded: decoded,
+                                scannedAt: new Date().toLocaleTimeString('es-PY')
+                            });
+                            // Limitar historial a 20 productos
+                            if (scannedProductsHistory.length > 20) {
+                                scannedProductsHistory = scannedProductsHistory.slice(0, 20);
+                            }
+                            activeHistoryIndex = 0;
+                            updateHistoryDisplay();
+                        } else {
+                            // Si ya existe, moverlo al principio
+                            scannedProductsHistory.splice(existingIndex, 1);
+                            scannedProductsHistory.unshift({
+                                ...product,
+                                decoded: decoded,
+                                scannedAt: new Date().toLocaleTimeString('es-PY')
+                            });
+                            activeHistoryIndex = 0;
+                            updateHistoryDisplay();
+                        }
                     }
-
-                    if (decoded) {
-                        document.getElementById('decoded-country').textContent = decoded.pais_codigo;
-                        document.getElementById('decoded-product').textContent = decoded.producto_id;
-                        document.getElementById('decoded-supplier').textContent = decoded.proveedor_codigo;
-                    }
+                    
+                    // Mostrar producto actual
+                    displayProduct(product, decoded);
+                    
+                    // Actualizar sección de compra
+                    updatePurchaseSection();
+                    
+                    // Mantener el escáner activo (no detenerlo)
+                    // El escáner seguirá escaneando para permitir escanear otro producto
                 } else {
                     document.getElementById('result-container').classList.remove('active');
                     document.getElementById('error-message').classList.add('active');
+                    document.getElementById('purchase-section').style.display = 'none';
+                    currentProductData = null;
+                    currentProduct = null;
                 }
             } catch (error) {
                 console.error('Error:', error);
+                currentProductData = null;
+                currentProduct = null;
+            }
+        }
+
+        function displayProduct(product, decoded) {
+            document.getElementById('result-code').textContent = product.codigo;
+            document.getElementById('result-name').textContent = product.nombre;
+            document.getElementById('result-category').textContent = product.categoria;
+            document.getElementById('result-price').textContent = formatNumber(product.precio);
+            document.getElementById('result-points').textContent = (product.puntos || 0).toLocaleString('es-PY');
+            document.getElementById('result-country').textContent = product.pais;
+            document.getElementById('result-supplier').textContent = product.proveedor;
+            document.getElementById('result-stock').textContent = product.stock + ' unidades';
+            
+            const stock = parseInt(product.stock);
+            const statusEl = document.getElementById('result-status');
+            if (stock > 50) {
+                statusEl.textContent = '✅ Disponible';
+                statusEl.style.color = '#00ff88';
+            } else if (stock > 0) {
+                statusEl.textContent = '⚠️ Stock bajo';
+                statusEl.style.color = '#ffaa00';
+            } else {
+                statusEl.textContent = '❌ Sin stock';
+                statusEl.style.color = '#ff4757';
+            }
+
+            if (decoded) {
+                document.getElementById('decoded-country').textContent = decoded.pais_codigo;
+                document.getElementById('decoded-product').textContent = decoded.producto_id;
+                document.getElementById('decoded-supplier').textContent = decoded.proveedor_codigo;
+            }
+        }
+
+        function updateHistoryDisplay() {
+            const historyList = document.getElementById('history-list');
+            const historySection = document.getElementById('history-section');
+            
+            if (scannedProductsHistory.length === 0) {
+                historySection.style.display = 'none';
+                return;
+            }
+            
+            historySection.style.display = 'block';
+            historyList.innerHTML = '';
+            
+            scannedProductsHistory.forEach((product, index) => {
+                const historyItem = document.createElement('div');
+                historyItem.className = `history-item ${index === activeHistoryIndex ? 'active' : ''}`;
+                historyItem.onclick = () => viewHistoryProduct(index);
+                
+                historyItem.innerHTML = `
+                    <div class="history-item-header">
+                        <div class="history-item-name">${product.nombre}</div>
+                        <div class="history-item-code">${product.codigo}</div>
+                    </div>
+                    <div class="history-item-details">
+                        <div class="history-item-price">₲ ${formatNumber(product.precio)}</div>
+                        <div class="history-item-points">⭐ ${(product.puntos || 0).toLocaleString('es-PY')} pts</div>
+                    </div>
+                `;
+                
+                historyList.appendChild(historyItem);
+            });
+        }
+
+        function viewHistoryProduct(index) {
+            if (index >= 0 && index < scannedProductsHistory.length) {
+                const product = scannedProductsHistory[index];
+                activeHistoryIndex = index;
+                currentProduct = product;
+                currentProductData = product;
+                
+                displayProduct(product, product.decoded);
+                updatePurchaseSection();
+                updateHistoryDisplay();
+                
+                // Scroll to result
+                document.getElementById('result-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function clearHistory() {
+            if (confirm('¿Deseas limpiar el historial de productos escaneados?')) {
+                scannedProductsHistory = [];
+                activeHistoryIndex = -1;
+                updateHistoryDisplay();
+            }
+        }
+
+        function updatePurchaseSection() {
+            if (!currentProduct || !currentUser) {
+                document.getElementById('purchase-section').style.display = 'none';
+                return;
+            }
+
+            const puntosNecesarios = currentProduct.puntos || 0;
+            const reintegro = Math.floor(puntosNecesarios * 0.10); // 10% de reintegro
+            
+            document.getElementById('reintegro-amount').textContent = reintegro.toLocaleString('es-PY');
+            
+            const btnPurchase = document.getElementById('btn-purchase');
+            if (currentUser.puntos >= puntosNecesarios) {
+                btnPurchase.disabled = false;
+                btnPurchase.style.opacity = '1';
+            } else {
+                btnPurchase.disabled = true;
+                btnPurchase.style.opacity = '0.5';
+            }
+            
+            document.getElementById('purchase-section').style.display = 'block';
+        }
+
+        async function purchaseWithPoints() {
+            if (!currentProduct || !currentUser) {
+                alert('No hay producto seleccionado');
+                return;
+            }
+
+            const puntosNecesarios = currentProduct.puntos || 0;
+            if (currentUser.puntos < puntosNecesarios) {
+                alert(`Puntos insuficientes. Necesitas ${puntosNecesarios} puntos, tienes ${currentUser.puntos}`);
+                return;
+            }
+
+            if (!confirm(`¿Confirmas la compra de ${currentProduct.nombre} por ${puntosNecesarios} puntos?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/purchase', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        product_code: currentProduct.codigo
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const purchase = data.purchase;
+                    const reintegro = purchase.reintegro;
+                    
+                    // Recargar usuario para tener datos actualizados
+                    await loadCurrentUser();
+                    
+                    // Mostrar mensaje de éxito
+                    alert(`✅ Compra realizada exitosamente!\n\n` +
+                          `Producto: ${purchase.product}\n` +
+                          `Puntos usados: ${purchase.puntos_usados}\n` +
+                          `Reintegro: +${reintegro} puntos\n` +
+                          `Puntos anteriores: ${purchase.puntos_anteriores}\n` +
+                          `Puntos actuales: ${purchase.puntos_nuevos}`);
+                    
+                    // Actualizar sección de compra
+                    updatePurchaseSection();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al realizar la compra. Por favor, intenta nuevamente.');
             }
         }
 
@@ -772,6 +1382,27 @@
             }
         }
 
+        // Cargar usuario actual
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch('/api/user/current');
+                const data = await response.json();
+                if (data.success) {
+                    currentUser = data.user;
+                    updateUserDisplay();
+                }
+            } catch (error) {
+                console.error('Error loading user:', error);
+            }
+        }
+
+        function updateUserDisplay() {
+            if (currentUser) {
+                document.getElementById('user-name').textContent = currentUser.nombre;
+                document.getElementById('user-points').textContent = currentUser.puntos.toLocaleString('es-PY');
+            }
+        }
+
         // Enter key para búsqueda manual
         document.getElementById('manual-code').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -779,12 +1410,139 @@
             }
         });
 
+        // Cargar usuario al iniciar
+        loadCurrentUser();
+
         // Limpiar al salir de la página
         window.addEventListener('beforeunload', function() {
             if (html5QrCode && isScanning) {
                 html5QrCode.stop();
             }
         });
+
+        // Barcode preview modal functions
+        let currentProductData = null;
+
+        function previewLastBarcode() {
+            const code = document.getElementById('last-code').textContent;
+            if (code && code !== '-') {
+                previewBarcode(code);
+            }
+        }
+
+        function previewResultBarcode() {
+            const code = document.getElementById('result-code').textContent;
+            if (code && code !== '-') {
+                previewBarcode(code);
+            }
+        }
+
+        async function previewBarcode(code) {
+            // Si ya tenemos los datos del producto actual, usarlos
+            if (currentProductData && currentProductData.codigo === code) {
+                showBarcodeModal(code, currentProductData);
+            } else {
+                // Buscar producto
+                try {
+                    const response = await fetch(`/api/product/${code}`);
+                    const data = await response.json();
+                    if (data.success) {
+                        currentProductData = data.product;
+                        showBarcodeModal(code, data.product);
+                    } else {
+                        // Mostrar solo el código de barras sin información del producto
+                        showBarcodeModal(code, null);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showBarcodeModal(code, null);
+                }
+            }
+        }
+
+        function showBarcodeModal(code, product) {
+            const modal = document.getElementById('barcode-modal');
+            const svgContainer = document.getElementById('barcode-preview-large');
+            
+            // Limpiar SVG anterior
+            svgContainer.innerHTML = '';
+            
+            // Generar código de barras grande
+            try {
+                JsBarcode(svgContainer, code, {
+                    format: "CODE128",
+                    width: 2,
+                    height: 120,
+                    displayValue: true,
+                    fontSize: 20,
+                    font: "JetBrains Mono",
+                    margin: 15,
+                    background: "#ffffff",
+                    lineColor: "#000000"
+                });
+            } catch(e) {
+                console.error('Error generating barcode:', e);
+                svgContainer.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#ff4757">Error al generar código</text>';
+            }
+            
+            // Actualizar código
+            document.getElementById('barcode-code-display').textContent = code;
+            
+            // Actualizar información del producto si está disponible
+            if (product) {
+                document.getElementById('barcode-product-name').textContent = product.nombre;
+                document.getElementById('barcode-product-category').textContent = product.categoria;
+                document.getElementById('barcode-product-price').textContent = '₲ ' + formatNumber(product.precio);
+                document.getElementById('barcode-product-stock').textContent = product.stock + ' unidades';
+            } else {
+                document.getElementById('barcode-product-name').textContent = 'Producto no encontrado';
+                document.getElementById('barcode-product-category').textContent = '-';
+                document.getElementById('barcode-product-price').textContent = '-';
+                document.getElementById('barcode-product-stock').textContent = '-';
+            }
+            
+            // Guardar código actual para descarga
+            svgContainer.setAttribute('data-code', code);
+            
+            // Mostrar modal
+            modal.classList.add('active');
+        }
+
+        function closeBarcodeModal() {
+            document.getElementById('barcode-modal').classList.remove('active');
+        }
+
+        function downloadBarcodePreview() {
+            const svg = document.getElementById('barcode-preview-large');
+            const code = svg.getAttribute('data-code');
+            
+            if (!code) return;
+            
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const blob = new Blob([svgData], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `barcode-${code}.svg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Close barcode modal on outside click
+        document.getElementById('barcode-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeBarcodeModal();
+        });
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeBarcodeModal();
+            }
+        });
+
     </script>
 </body>
 </html>

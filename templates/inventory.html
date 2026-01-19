@@ -137,7 +137,6 @@
             gap: 15px;
             margin-bottom: 30px;
             flex-wrap: wrap;
-            align-items: center;
         }
 
         .search-box {
@@ -241,6 +240,13 @@
             padding: 5px 10px;
             border-radius: 6px;
             min-width: 100px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .product-barcode:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
         }
 
         .product-barcode svg {
@@ -340,16 +346,6 @@
             transform: scale(1.1);
         }
 
-        .btn-print {
-            background: rgba(0, 255, 136, 0.1);
-            color: var(--success);
-        }
-
-        .btn-print:hover {
-            background: rgba(0, 255, 136, 0.2);
-            transform: scale(1.1);
-        }
-
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -389,6 +385,11 @@
             max-width: 500px;
             width: 90%;
             animation: modalIn 0.3s ease;
+        }
+
+        .modal.barcode-modal {
+            max-width: 600px;
+            text-align: center;
         }
 
         @keyframes modalIn {
@@ -503,86 +504,63 @@
             background: rgba(255, 255, 255, 0.15);
         }
 
-        /* Barcode Preview Modal */
-        .barcode-preview {
-            text-align: center;
-            padding: 30px;
-        }
-
-        .barcode-preview-info {
-            margin-bottom: 30px;
-        }
-
-        .barcode-preview-info h4 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: var(--text-primary);
-        }
-
-        .barcode-preview-info .product-code {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.2rem;
-            color: var(--accent-secondary);
-            margin-bottom: 15px;
-        }
-
-        .barcode-preview-info .product-details {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-            margin-top: 10px;
-        }
-
-        .barcode-preview svg {
+        .barcode-preview-container {
             background: white;
-            padding: 20px;
-            border-radius: 12px;
+            border-radius: 16px;
+            padding: 40px;
             margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .barcode-preview-container svg {
             max-width: 100%;
             height: auto;
         }
 
-        .barcode-actions {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 30px;
+        .barcode-code-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin: 20px 0;
+            letter-spacing: 3px;
         }
 
-        .barcode-actions .btn {
-            min-width: 150px;
+        .barcode-product-info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
         }
 
-        /* Print styles */
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            .print-area, .print-area * {
-                visibility: visible;
-            }
-            .print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                padding: 20px;
-            }
-            .barcode-print-item {
-                page-break-inside: avoid;
-                margin-bottom: 30px;
-                text-align: center;
-            }
-            .barcode-print-item svg {
-                background: white;
-                padding: 15px;
-            }
+        .barcode-product-info h4 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .barcode-product-info p {
+            color: var(--text-secondary);
+            margin: 5px 0;
         }
 
         @media (max-width: 768px) {
             table {
                 display: block;
                 overflow-x: auto;
+            }
+
+            .modal.barcode-modal {
+                max-width: 90%;
+                padding: 20px;
+            }
+
+            .barcode-preview-container {
+                padding: 20px;
+            }
+
+            .barcode-code-display {
+                font-size: 1.2rem;
+                letter-spacing: 2px;
             }
         }
     </style>
@@ -665,7 +643,7 @@
                     <tr data-code="{{ product.codigo }}" data-category="{{ product.categoria }}" data-stock="{{ product.stock }}">
                         <td>
                             <div class="product-info">
-                                <div class="product-barcode">
+                                <div class="product-barcode" onclick="previewBarcode('{{ product.codigo }}', '{{ product.nombre }}', '{{ product.categoria }}', '{{ product.precio }}')">
                                     <svg class="barcode-mini" data-code="{{ product.codigo }}"></svg>
                                 </div>
                                 <div>
@@ -689,9 +667,8 @@
                         </td>
                         <td>
                             <div class="actions">
-                                <button class="btn-icon btn-print" onclick="previewBarcode('{{ product.codigo }}', '{{ product.nombre }}', '{{ product.precio }}', '{{ product.categoria }}')" title="Ver código de barras">🏷️</button>
-                                <button class="btn-icon btn-edit" onclick="editProduct('{{ product.codigo }}')" title="Editar">✏️</button>
-                                <button class="btn-icon btn-delete" onclick="deleteProduct('{{ product.codigo }}')" title="Eliminar">🗑️</button>
+                                <button class="btn-icon btn-edit" onclick="editProduct('{{ product.codigo }}')">✏️</button>
+                                <button class="btn-icon btn-delete" onclick="deleteProduct('{{ product.codigo }}')">🗑️</button>
                             </div>
                         </td>
                     </tr>
@@ -704,31 +681,6 @@
                 <p>No hay productos en el inventario</p>
             </div>
             {% endif %}
-        </div>
-    </div>
-
-    <!-- Barcode Preview Modal -->
-    <div class="modal-overlay" id="barcode-modal">
-        <div class="modal" style="max-width: 600px;">
-            <div class="modal-header">
-                <h3>🏷️ Código de Barras</h3>
-                <button class="modal-close" onclick="closeBarcodeModal()">✕</button>
-            </div>
-            <div class="barcode-preview" id="barcode-preview-content">
-                <div class="barcode-preview-info">
-                    <h4 id="barcode-product-name"></h4>
-                    <div class="product-code" id="barcode-product-code"></div>
-                    <div class="product-details">
-                        <div id="barcode-product-category"></div>
-                        <div>Precio: <span class="price" id="barcode-product-price"></span></div>
-                    </div>
-                </div>
-                <svg id="barcode-preview-svg"></svg>
-                <div class="barcode-actions">
-                    <button class="btn btn-secondary" onclick="closeBarcodeModal()">Cerrar</button>
-                    <button class="btn btn-primary" onclick="printBarcode()">🖨️ Imprimir</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -760,6 +712,29 @@
                     <button type="submit" class="btn btn-primary">Guardar Cambios</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Barcode Preview Modal -->
+    <div class="modal-overlay" id="barcode-modal">
+        <div class="modal barcode-modal">
+            <div class="modal-header">
+                <h3>🏷️ Vista Previa del Código de Barras</h3>
+                <button class="modal-close" onclick="closeBarcodeModal()">✕</button>
+            </div>
+            <div class="barcode-preview-container">
+                <svg id="barcode-preview-large"></svg>
+            </div>
+            <div class="barcode-code-display" id="barcode-code-display"></div>
+            <div class="barcode-product-info">
+                <h4 id="barcode-product-name"></h4>
+                <p><strong>Categoría:</strong> <span id="barcode-product-category"></span></p>
+                <p><strong>Precio:</strong> <span id="barcode-product-price"></span></p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeBarcodeModal()">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="downloadBarcodePreview()">📥 Descargar</button>
+            </div>
         </div>
     </div>
 
@@ -925,140 +900,66 @@
             if (e.target === this) closeModal();
         });
 
-        // Barcode preview
-        let currentBarcodeData = null;
-
-        function previewBarcode(code, name, price, category) {
-            currentBarcodeData = { code, name, price, category };
+        // Barcode preview modal functions
+        function previewBarcode(code, nombre, categoria, precio) {
+            const modal = document.getElementById('barcode-modal');
+            const svgContainer = document.getElementById('barcode-preview-large');
             
-            document.getElementById('barcode-product-name').textContent = name;
-            document.getElementById('barcode-product-code').textContent = code;
-            document.getElementById('barcode-product-category').textContent = `Categoría: ${category}`;
-            document.getElementById('barcode-product-price').textContent = `₲ ${parseInt(price).toLocaleString()}`;
-
-            const svg = document.getElementById('barcode-preview-svg');
-            svg.innerHTML = ''; // Clear previous barcode
+            // Limpiar SVG anterior
+            svgContainer.innerHTML = '';
             
+            // Generar código de barras grande
             try {
-                JsBarcode(svg, code, {
+                JsBarcode(svgContainer, code, {
                     format: "CODE128",
-                    width: 3,
-                    height: 100,
+                    width: 2,
+                    height: 120,
                     displayValue: true,
                     fontSize: 20,
-                    margin: 10,
+                    font: "JetBrains Mono",
+                    margin: 15,
                     background: "#ffffff",
                     lineColor: "#000000"
                 });
-                document.getElementById('barcode-modal').classList.add('active');
             } catch(e) {
                 console.error('Error generating barcode:', e);
-                alert('Error al generar el código de barras');
+                svgContainer.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#ff4757">Error al generar código</text>';
             }
+            
+            // Actualizar información del producto
+            document.getElementById('barcode-code-display').textContent = code;
+            document.getElementById('barcode-product-name').textContent = nombre;
+            document.getElementById('barcode-product-category').textContent = categoria;
+            document.getElementById('barcode-product-price').textContent = '₲ ' + parseInt(precio).toLocaleString('es-PY');
+            
+            // Guardar código actual para descarga
+            svgContainer.setAttribute('data-code', code);
+            
+            // Mostrar modal
+            modal.classList.add('active');
         }
 
         function closeBarcodeModal() {
             document.getElementById('barcode-modal').classList.remove('active');
         }
 
-        function printBarcode() {
-            if (!currentBarcodeData) return;
-
-            // Create print window
-            const printWindow = window.open('', '_blank');
-            const code = currentBarcodeData.code;
-            const name = currentBarcodeData.name;
-            const price = currentBarcodeData.price;
-            const category = currentBarcodeData.category;
-
-            // Create SVG for printing
-            const printSvg = document.createElement('svg');
-            printSvg.id = 'print-barcode';
+        function downloadBarcodePreview() {
+            const svg = document.getElementById('barcode-preview-large');
+            const code = svg.getAttribute('data-code');
             
-            // Generate barcode in new context
-            setTimeout(() => {
-                JsBarcode(printSvg, code, {
-                    format: "CODE128",
-                    width: 3,
-                    height: 100,
-                    displayValue: true,
-                    fontSize: 20,
-                    margin: 10,
-                    background: "#ffffff",
-                    lineColor: "#000000"
-                });
-
-                const barcodeHTML = printSvg.outerHTML;
-
-                printWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Imprimir Código de Barras - ${name}</title>
-                        <style>
-                            @page {
-                                size: A4;
-                                margin: 20mm;
-                            }
-                            body {
-                                font-family: Arial, sans-serif;
-                                padding: 40px;
-                                text-align: center;
-                            }
-                            .barcode-container {
-                                display: inline-block;
-                                padding: 30px;
-                                border: 2px solid #000;
-                                border-radius: 10px;
-                                margin: 20px 0;
-                            }
-                            .product-name {
-                                font-size: 24px;
-                                font-weight: bold;
-                                margin-bottom: 10px;
-                            }
-                            .product-code {
-                                font-family: 'Courier New', monospace;
-                                font-size: 18px;
-                                color: #666;
-                                margin-bottom: 20px;
-                            }
-                            .product-info {
-                                margin-top: 20px;
-                                font-size: 14px;
-                                color: #333;
-                            }
-                            svg {
-                                background: white;
-                                padding: 15px;
-                                display: block;
-                                margin: 0 auto;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="barcode-container">
-                            <div class="product-name">${name}</div>
-                            <div class="product-code">Código: ${code}</div>
-                            ${barcodeHTML}
-                            <div class="product-info">
-                                <div>Categoría: ${category}</div>
-                                <div>Precio: ₲ ${parseInt(price).toLocaleString()}</div>
-                            </div>
-                        </div>
-                        <script>
-                            window.onload = function() {
-                                window.print();
-                                window.onafterprint = function() {
-                                    window.close();
-                                };
-                            };
-                        </script>
-                    </body>
-                    </html>
-                `);
-                printWindow.document.close();
-            }, 100);
+            if (!code) return;
+            
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const blob = new Blob([svgData], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `barcode-${code}.svg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         // Close barcode modal on outside click
@@ -1066,145 +967,11 @@
             if (e.target === this) closeBarcodeModal();
         });
 
-        // Bulk print function
-        function printMultipleBarcodes() {
-            const selected = prompt('Ingrese los códigos de barras separados por comas, o deje vacío para imprimir todos:');
-            let codesToPrint = [];
-
-            if (!selected || selected.trim() === '') {
-                // Print all products
-                const rows = document.querySelectorAll('#products-table tr');
-                rows.forEach(function(row) {
-                    codesToPrint.push({
-                        code: row.dataset.code,
-                        name: row.querySelector('.product-name') ? row.querySelector('.product-name').textContent : '',
-                        price: row.querySelector('.price') ? row.querySelector('.price').textContent.replace(/[^\d]/g, '') : '0',
-                        category: row.dataset.category || ''
-                    });
-                });
-            } else {
-                // Print selected codes
-                const codes = selected.split(',').map(function(c) { return c.trim(); });
-                codes.forEach(function(code) {
-                    const product = Array.from(document.querySelectorAll('#products-table tr')).find(
-                        function(row) { return row.dataset.code === code; }
-                    );
-                    if (product) {
-                        codesToPrint.push({
-                            code: code,
-                            name: product.querySelector('.product-name') ? product.querySelector('.product-name').textContent : '',
-                            price: product.querySelector('.price') ? product.querySelector('.price').textContent.replace(/[^\d]/g, '') : '0',
-                            category: product.dataset.category || ''
-                        });
-                    }
-                });
-            }
-
-            if (codesToPrint.length === 0) {
-                alert('No se encontraron productos para imprimir');
-                return;
-            }
-
-            // Helper function to escape HTML
-            function escapeHtml(text) {
-                if (!text) return '';
-                const map = {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                };
-                return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
-            }
-
-            // Create a temporary container for SVGs (off-screen)
-            const tempContainer = document.createElement('div');
-            tempContainer.style.position = 'absolute';
-            tempContainer.style.left = '-9999px';
-            tempContainer.style.visibility = 'hidden';
-            document.body.appendChild(tempContainer);
-
-            // Generate all barcodes
-            const svgElements = [];
-            codesToPrint.forEach(function(item, index) {
-                const svg = document.createElement('svg');
-                svg.id = 'temp-barcode-' + index;
-                tempContainer.appendChild(svg);
-                svgElements.push({ svg: svg, item: item });
-                
-                try {
-                    JsBarcode(svg, item.code, {
-                        format: "CODE128",
-                        width: 2,
-                        height: 80,
-                        displayValue: true,
-                        fontSize: 16,
-                        margin: 5,
-                        background: "#ffffff",
-                        lineColor: "#000000"
-                    });
-                } catch(e) {
-                    console.error('Error generating barcode for', item.code, e);
-                }
-            });
-
-            // Wait a bit for all barcodes to render, then build print content
-            setTimeout(function() {
-                // Build print content
-                let printContent = '<!DOCTYPE html><html><head><title>Imprimir Códigos de Barras</title><style>';
-                printContent += '@page { size: A4; margin: 10mm; }';
-                printContent += 'body { font-family: Arial, sans-serif; padding: 20px; }';
-                printContent += '.barcode-item { display: inline-block; width: 48%; margin: 1%; padding: 20px; border: 1px solid #000; border-radius: 5px; text-align: center; page-break-inside: avoid; vertical-align: top; }';
-                printContent += '.product-name { font-size: 18px; font-weight: bold; margin-bottom: 8px; }';
-                printContent += '.product-code { font-family: "Courier New", monospace; font-size: 14px; color: #666; margin-bottom: 10px; }';
-                printContent += 'svg { background: white; padding: 10px; display: block; margin: 0 auto; max-width: 100%; }';
-                printContent += '.product-info { margin-top: 10px; font-size: 12px; color: #333; }';
-                printContent += '</style></head><body>';
-
-                svgElements.forEach(function(element) {
-                    const item = element.item;
-                    const svgHTML = element.svg.outerHTML;
-                    
-                    printContent += '<div class="barcode-item">';
-                    printContent += '<div class="product-name">' + escapeHtml(item.name) + '</div>';
-                    printContent += '<div class="product-code">' + escapeHtml(item.code) + '</div>';
-                    printContent += svgHTML;
-                    printContent += '<div class="product-info">';
-                    if (item.category) {
-                        printContent += 'Categoría: ' + escapeHtml(item.category) + '<br>';
-                    }
-                    printContent += 'Precio: ₲ ' + parseInt(item.price).toLocaleString();
-                    printContent += '</div></div>';
-                });
-
-                printContent += '</body></html>';
-
-                // Clean up temporary container
-                document.body.removeChild(tempContainer);
-
-                // Open print window and write content
-                const printWindow = window.open('', '_blank');
-                printWindow.document.write(printContent);
-                printWindow.document.close();
-
-                // Wait for content to load, then print
-                setTimeout(function() {
-                    printWindow.print();
-                }, 300);
-            }, 200);
-        }
-
-        // Add print all button to toolbar
-        window.addEventListener('DOMContentLoaded', function() {
-            const toolbar = document.querySelector('.toolbar');
-            if (toolbar) {
-                const printAllBtn = document.createElement('button');
-                printAllBtn.className = 'btn btn-primary';
-                printAllBtn.textContent = '🖨️ Imprimir Códigos';
-                printAllBtn.onclick = printMultipleBarcodes;
-                printAllBtn.style.cssText = 'margin-left: auto; white-space: nowrap;';
-                toolbar.appendChild(printAllBtn);
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeBarcodeModal();
             }
         });
     </script>
