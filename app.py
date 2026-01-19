@@ -342,9 +342,83 @@ def get_current_user():
     })
 
 
+@app.route('/api/purchase/recognize', methods=['POST'])
+def recognize_or_create_user():
+    """API para reconocer usuario desde imagen facial o crear uno por defecto"""
+    data = request.json
+    
+    if 'facial_image' not in data or not data['facial_image']:
+        return jsonify({
+            'success': False,
+            'message': 'Imagen facial requerida'
+        })
+    
+    facial_image = data['facial_image']
+    
+    # Intentar reconocer al usuario
+    recognition_result = recognize_face(facial_image, tolerance=0.6)
+    
+    user = None
+    user_created = False
+    
+    if recognition_result['success'] and recognition_result['user_id']:
+        # Usuario reconocido
+        user_id = recognition_result['user_id']
+        users = read_users()
+        user = next((u for u in users if u['id'] == user_id), None)
+    else:
+        # No se reconoció usuario, crear uno por defecto
+        users = read_users()
+        
+        # Generar nuevo ID
+        if users:
+            max_id = max(int(u['id']) for u in users)
+            new_id = str(max_id + 1)
+        else:
+            new_id = '1'
+        
+        # Crear usuario por defecto
+        new_user = {
+            'id': new_id,
+            'nombre': f'Usuario {new_id}',
+            'puntos': '1000'
+        }
+        
+        users.append(new_user)
+        write_users(users)
+        
+        # Registrar el rostro del nuevo usuario
+        register_result = register_user_face(new_id, facial_image)
+        
+        if register_result['success']:
+            user = new_user
+            user_created = True
+        else:
+            # Si no se pudo registrar el rostro, igual crear el usuario
+            user = new_user
+            user_created = True
+    
+    if not user:
+        return jsonify({
+            'success': False,
+            'message': 'No se pudo identificar o crear el usuario'
+        })
+    
+    return jsonify({
+        'success': True,
+        'user': {
+            'id': user['id'],
+            'nombre': user['nombre'],
+            'puntos': int(user['puntos'])
+        },
+        'user_created': user_created,
+        'message': 'Usuario creado exitosamente' if user_created else 'Usuario identificado exitosamente'
+    })
+
+
 @app.route('/api/purchase', methods=['POST'])
 def purchase_with_points():
-    """API para comprar un producto usando puntos"""
+    """API para comprar un producto usando puntos con user_id"""
     data = request.json
     
     # Validar datos
@@ -352,6 +426,12 @@ def purchase_with_points():
         return jsonify({
             'success': False,
             'message': 'Código de producto requerido'
+        })
+    
+    if 'user_id' not in data:
+        return jsonify({
+            'success': False,
+            'message': 'ID de usuario requerido'
         })
     
     # Obtener producto
@@ -365,8 +445,10 @@ def purchase_with_points():
     # Calcular puntos necesarios
     puntos_necesarios = calculate_product_points(product['precio'])
     
-    # Obtener usuario actual
-    user = get_default_user()
+    # Obtener usuario por ID
+    users = read_users()
+    user = next((u for u in users if u['id'] == data['user_id']), None)
+    
     if not user:
         return jsonify({
             'success': False,
@@ -386,7 +468,6 @@ def purchase_with_points():
     reintegro = calculate_reintegro(puntos_necesarios)
     
     # Actualizar puntos del usuario
-    users = read_users()
     nuevos_puntos = puntos_actuales - puntos_necesarios + reintegro
     
     for i, u in enumerate(users):

@@ -776,6 +776,44 @@
             background: rgba(255, 255, 255, 0.15);
         }
 
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 2rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .close-modal:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 20px 0;
+        }
+
         /* Purchase Button */
         .purchase-section {
             margin-top: 25px;
@@ -1009,6 +1047,49 @@
         </div>
     </div>
 
+    <!-- Video oculto para reconocimiento facial silencioso -->
+    <video id="hidden-facial-video" autoplay playsinline style="position: fixed; top: -9999px; left: -9999px; width: 1px; height: 1px; opacity: 0;"></video>
+    <canvas id="hidden-facial-canvas" style="display: none;"></canvas>
+
+    <!-- Modal de Reconocimiento Facial -->
+    <div class="modal-overlay" id="facial-recognition-modal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>👤 Identificación de Usuario</h3>
+                <button class="close-modal" onclick="closeFacialModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="facial-recognition-status" style="text-align: center; padding: 20px;">
+                    <div class="loading" style="margin: 0 auto 15px; width: 40px; height: 40px; border-width: 4px;"></div>
+                    <p>Escaneando tu rostro...</p>
+                </div>
+                <div id="facial-user-info" style="display: none;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">👤</div>
+                        <h3 id="facial-user-name" style="font-size: 1.5rem; margin-bottom: 10px;"></h3>
+                        <div style="background: var(--bg-secondary); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                            <p style="color: var(--text-secondary); margin-bottom: 5px;">Puntos disponibles</p>
+                            <p style="font-size: 2rem; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono', monospace;" id="facial-user-points"></p>
+                        </div>
+                    </div>
+                    <div style="background: rgba(0, 255, 136, 0.1); border: 1px solid var(--success); border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+                        <p style="color: var(--success); font-size: 0.9rem; margin: 0;">
+                            <strong>Producto:</strong> <span id="facial-product-name"></span><br>
+                            <strong>Puntos necesarios:</strong> <span id="facial-product-points"></span>
+                        </p>
+                    </div>
+                </div>
+                <div id="facial-error" style="display: none; text-align: center; color: var(--error); padding: 20px;">
+                    <p id="facial-error-message"></p>
+                </div>
+            </div>
+            <div class="modal-actions" id="facial-modal-actions" style="display: none;">
+                <button type="button" class="btn-modal btn-modal-secondary" onclick="closeFacialModal()">Cancelar</button>
+                <button type="button" class="btn-modal btn-modal-primary" id="confirm-purchase-btn" onclick="confirmPurchaseAfterRecognition()">Confirmar Compra</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let html5QrCode = null;
         let isScanning = false;
@@ -1018,6 +1099,8 @@
         let currentProduct = null;
         let scannedProductsHistory = [];
         let activeHistoryIndex = -1;
+        let facialStream = null;
+        let facialCameraInitialized = false;
 
         function updateStatus(scanning) {
             const status = document.getElementById('scan-status');
@@ -1281,8 +1364,18 @@
         }
 
         function updatePurchaseSection() {
-            if (!currentProduct || !currentUser) {
+            if (!currentProduct) {
                 document.getElementById('purchase-section').style.display = 'none';
+                return;
+            }
+
+            // Si no hay usuario, no mostrar la sección de compra
+            // El usuario se identificará cuando haga clic en comprar
+            if (!currentUser) {
+                document.getElementById('purchase-section').style.display = 'block';
+                const btnPurchase = document.getElementById('btn-purchase');
+                btnPurchase.disabled = false;
+                btnPurchase.style.opacity = '1';
                 return;
             }
 
@@ -1303,21 +1396,193 @@
             document.getElementById('purchase-section').style.display = 'block';
         }
 
+        // Inicializar cámara facial silenciosa
+        async function initFacialCamera() {
+            if (facialCameraInitialized) return;
+            
+            try {
+                facialStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' } 
+                });
+                const video = document.getElementById('hidden-facial-video');
+                video.srcObject = facialStream;
+                facialCameraInitialized = true;
+                console.log('Cámara facial inicializada silenciosamente');
+            } catch (error) {
+                console.warn('No se pudo inicializar la cámara facial:', error);
+                // Continuar sin reconocimiento facial si no hay cámara disponible
+            }
+        }
+
+        // Capturar frame del video facial
+        function captureFacialFrame() {
+            const video = document.getElementById('hidden-facial-video');
+            const canvas = document.getElementById('hidden-facial-canvas');
+            
+            if (!video || !video.videoWidth || !video.videoHeight) {
+                return null;
+            }
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            return canvas.toDataURL('image/jpeg', 0.8);
+        }
+
+        let recognizedUserData = null;
+
         async function purchaseWithPoints() {
-            if (!currentProduct || !currentUser) {
+            if (!currentProduct) {
                 alert('No hay producto seleccionado');
                 return;
             }
 
-            const puntosNecesarios = currentProduct.puntos || 0;
-            if (currentUser.puntos < puntosNecesarios) {
-                alert(`Puntos insuficientes. Necesitas ${puntosNecesarios} puntos, tienes ${currentUser.puntos}`);
+            // Mostrar modal de reconocimiento facial
+            openFacialModal();
+
+            // Inicializar cámara facial si no está inicializada
+            if (!facialCameraInitialized) {
+                try {
+                    await initFacialCamera();
+                } catch (error) {
+                    showFacialError('No se pudo acceder a la cámara. Por favor, permite el acceso.');
+                    return;
+                }
+            }
+
+            // Esperar un momento para que el video se inicialice
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Capturar rostro
+            let facialImage = null;
+            if (facialCameraInitialized) {
+                facialImage = captureFacialFrame();
+            }
+
+            if (!facialImage) {
+                showFacialError('No se pudo capturar el rostro. Por favor, intenta nuevamente.');
                 return;
             }
 
-            if (!confirm(`¿Confirmas la compra de ${currentProduct.nombre} por ${puntosNecesarios} puntos?`)) {
+            // Reconocer o crear usuario
+            try {
+                const response = await fetch('/api/purchase/recognize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        facial_image: facialImage,
+                        product_code: currentProduct.codigo
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Guardar datos del usuario en variable global y en atributos del modal
+                    recognizedUserData = data;
+                    document.getElementById('confirm-purchase-btn').setAttribute('data-user-id', data.user.id);
+                    document.getElementById('confirm-purchase-btn').setAttribute('data-user-name', data.user.nombre);
+                    document.getElementById('confirm-purchase-btn').setAttribute('data-user-points', data.user.puntos);
+                    showFacialUserInfo(data.user, currentProduct);
+                } else {
+                    showFacialError(data.message || 'Error al identificar usuario');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showFacialError('Error al identificar usuario. Por favor, intenta nuevamente.');
+            }
+        }
+
+        function openFacialModal() {
+            document.getElementById('facial-recognition-modal').classList.add('active');
+            document.getElementById('facial-recognition-status').style.display = 'block';
+            document.getElementById('facial-user-info').style.display = 'none';
+            document.getElementById('facial-error').style.display = 'none';
+            document.getElementById('facial-modal-actions').style.display = 'none';
+        }
+
+        function closeFacialModal() {
+            document.getElementById('facial-recognition-modal').classList.remove('active');
+            recognizedUserData = null;
+            // Limpiar atributos del botón
+            const btn = document.getElementById('confirm-purchase-btn');
+            btn.removeAttribute('data-user-id');
+            btn.removeAttribute('data-user-name');
+            btn.removeAttribute('data-user-points');
+        }
+
+        function showFacialUserInfo(user, product) {
+            document.getElementById('facial-recognition-status').style.display = 'none';
+            document.getElementById('facial-user-info').style.display = 'block';
+            document.getElementById('facial-error').style.display = 'none';
+            document.getElementById('facial-modal-actions').style.display = 'flex';
+
+            document.getElementById('facial-user-name').textContent = user.nombre;
+            document.getElementById('facial-user-points').textContent = user.puntos.toLocaleString('es-PY');
+            document.getElementById('facial-product-name').textContent = product.nombre;
+            document.getElementById('facial-product-points').textContent = (product.puntos || 0).toLocaleString('es-PY');
+
+            // Actualizar currentUser inmediatamente con el usuario identificado
+            currentUser = {
+                id: user.id,
+                nombre: user.nombre,
+                puntos: user.puntos
+            };
+            
+            // Actualizar la visualización del usuario en la interfaz
+            updateUserDisplay();
+            
+            // Actualizar la sección de compra con el nuevo usuario
+            updatePurchaseSection();
+
+            // Habilitar o deshabilitar botón según puntos
+            const confirmBtn = document.getElementById('confirm-purchase-btn');
+            if (user.puntos >= (product.puntos || 0)) {
+                confirmBtn.disabled = false;
+                confirmBtn.style.opacity = '1';
+            } else {
+                confirmBtn.disabled = true;
+                confirmBtn.style.opacity = '0.5';
+            }
+        }
+
+        function showFacialError(message) {
+            document.getElementById('facial-recognition-status').style.display = 'none';
+            document.getElementById('facial-user-info').style.display = 'none';
+            document.getElementById('facial-error').style.display = 'block';
+            document.getElementById('facial-error-message').textContent = message;
+            document.getElementById('facial-modal-actions').style.display = 'flex';
+        }
+
+        async function confirmPurchaseAfterRecognition() {
+            if (!currentProduct) {
+                alert('No hay producto seleccionado');
                 return;
             }
+
+            // Obtener datos del usuario desde los atributos del botón o de la variable global
+            const userId = document.getElementById('confirm-purchase-btn').getAttribute('data-user-id') || 
+                          (recognizedUserData && recognizedUserData.user ? recognizedUserData.user.id : null);
+            const userName = document.getElementById('confirm-purchase-btn').getAttribute('data-user-name') || 
+                            (recognizedUserData && recognizedUserData.user ? recognizedUserData.user.nombre : 'Usuario');
+            const userPoints = parseInt(document.getElementById('confirm-purchase-btn').getAttribute('data-user-points') || 
+                            (recognizedUserData && recognizedUserData.user ? recognizedUserData.user.puntos : 0));
+
+            if (!userId) {
+                alert('Error: No se pudo identificar al usuario. Por favor, intenta nuevamente.');
+                return;
+            }
+
+            const puntosNecesarios = currentProduct.puntos || 0;
+            if (userPoints < puntosNecesarios) {
+                alert(`Puntos insuficientes. Necesitas ${puntosNecesarios} puntos, tienes ${userPoints}`);
+                return;
+            }
+
+            closeFacialModal();
 
             try {
                 const response = await fetch('/api/purchase', {
@@ -1326,7 +1591,8 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        product_code: currentProduct.codigo
+                        product_code: currentProduct.codigo,
+                        user_id: userId
                     })
                 });
 
@@ -1336,18 +1602,28 @@
                     const purchase = data.purchase;
                     const reintegro = purchase.reintegro;
                     
-                    // Recargar usuario para tener datos actualizados
-                    await loadCurrentUser();
+                    // Actualizar usuario con los nuevos puntos
+                    if (currentUser && currentUser.id === userId) {
+                        currentUser.puntos = purchase.puntos_nuevos;
+                    } else {
+                        currentUser = {
+                            id: userId,
+                            nombre: userName,
+                            puntos: purchase.puntos_nuevos
+                        };
+                    }
+                    updateUserDisplay();
                     
                     // Mostrar mensaje de éxito
                     alert(`✅ Compra realizada exitosamente!\n\n` +
+                          `Usuario: ${userName}\n` +
                           `Producto: ${purchase.product}\n` +
                           `Puntos usados: ${purchase.puntos_usados}\n` +
                           `Reintegro: +${reintegro} puntos\n` +
                           `Puntos anteriores: ${purchase.puntos_anteriores}\n` +
                           `Puntos actuales: ${purchase.puntos_nuevos}`);
                     
-                    // Actualizar sección de compra
+                    // Actualizar sección de compra con los nuevos puntos
                     updatePurchaseSection();
                 } else {
                     alert('Error: ' + data.message);
@@ -1382,8 +1658,14 @@
             }
         }
 
-        // Cargar usuario actual
+        // Cargar usuario actual (solo si no hay usuario identificado)
         async function loadCurrentUser() {
+            // No cargar usuario por defecto si ya hay un usuario identificado
+            // Esto permite que cada compra use el usuario identificado por reconocimiento facial
+            if (currentUser) {
+                return;
+            }
+            
             try {
                 const response = await fetch('/api/user/current');
                 const data = await response.json();
@@ -1412,11 +1694,25 @@
 
         // Cargar usuario al iniciar
         loadCurrentUser();
+        
+        // Inicializar cámara facial al cargar la página
+        initFacialCamera();
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('facial-recognition-modal').addEventListener('click', function(e) {
+            if (e.target.id === 'facial-recognition-modal') {
+                closeFacialModal();
+            }
+        });
 
         // Limpiar al salir de la página
         window.addEventListener('beforeunload', function() {
             if (html5QrCode && isScanning) {
                 html5QrCode.stop();
+            }
+            // Limpiar stream facial
+            if (facialStream) {
+                facialStream.getTracks().forEach(track => track.stop());
             }
         });
 
