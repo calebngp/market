@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario - Market</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --accent: #00ff88;
+            --accent-glow: rgba(0, 255, 136, 0.3);
+            --accent-secondary: #00d9ff;
+            --text-primary: #ffffff;
+            --text-secondary: #8b8b9e;
+            --border: #2a2a3a;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff4757;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(ellipse at 50% 0%, rgba(0, 255, 136, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 100% 100%, rgba(0, 217, 255, 0.05) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 40px;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .nav-brand span {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .nav-title {
+            font-size: 1.2rem;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-card:nth-child(1) .stat-icon { background: rgba(0, 255, 136, 0.15); }
+        .stat-card:nth-child(2) .stat-icon { background: rgba(0, 217, 255, 0.15); }
+        .stat-card:nth-child(3) .stat-icon { background: rgba(255, 170, 0, 0.15); }
+        .stat-card:nth-child(4) .stat-icon { background: rgba(255, 107, 53, 0.15); }
+
+        .stat-info h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-info p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Search and filters */
+        .toolbar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 14px 20px 14px 50px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent);
+        }
+
+        .search-box::before {
+            content: '🔍';
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.1rem;
+        }
+
+        .filter-select {
+            padding: 14px 40px 14px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b8b9e' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+        }
+
+        /* Table */
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--bg-secondary);
+        }
+
+        th {
+            padding: 18px 20px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .product-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .product-barcode {
+            background: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            min-width: 100px;
+        }
+
+        .product-barcode svg {
+            height: 40px;
+        }
+
+        .product-name {
+            font-weight: 500;
+        }
+
+        .product-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+        }
+
+        .category-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+        }
+
+        .price {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        .stock-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .stock-badge.high {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: var(--success);
+        }
+
+        .stock-badge.medium {
+            background: rgba(255, 170, 0, 0.1);
+            border: 1px solid rgba(255, 170, 0, 0.3);
+            color: var(--warning);
+        }
+
+        .stock-badge.low {
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            color: var(--error);
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            width: 38px;
+            height: 38px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit {
+            background: rgba(0, 217, 255, 0.1);
+            color: var(--accent-secondary);
+        }
+
+        .btn-edit:hover {
+            background: rgba(0, 217, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .btn-delete {
+            background: rgba(255, 71, 87, 0.1);
+            color: var(--error);
+        }
+
+        .btn-delete:hover {
+            background: rgba(255, 71, 87, 0.2);
+            transform: scale(1.1);
+        }
+
+        .btn-print {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--success);
+        }
+
+        .btn-print:hover {
+            background: rgba(0, 255, 136, 0.2);
+            transform: scale(1.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .modal-header h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 71, 87, 0.2);
+            color: var(--error);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 18px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #00cc6a);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px var(--accent-glow);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Barcode Preview Modal */
+        .barcode-preview {
+            text-align: center;
+            padding: 30px;
+        }
+
+        .barcode-preview-info {
+            margin-bottom: 30px;
+        }
+
+        .barcode-preview-info h4 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .barcode-preview-info .product-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--accent-secondary);
+            margin-bottom: 15px;
+        }
+
+        .barcode-preview-info .product-details {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 10px;
+        }
+
+        .barcode-preview svg {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .barcode-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .barcode-actions .btn {
+            min-width: 150px;
+        }
+
+        /* Print styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .print-area, .print-area * {
+                visibility: visible;
+            }
+            .print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 20px;
+            }
+            .barcode-print-item {
+                page-break-inside: avoid;
+                margin-bottom: 30px;
+                text-align: center;
+            }
+            .barcode-print-item svg {
+                background: white;
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    
+    <nav class="navbar">
+        <a href="/" class="nav-brand">
+            <span>📦</span>
+            <span>Market</span>
+        </a>
+        <span class="nav-title">📋 Inventario</span>
+    </nav>
+
+    <div class="container">
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-info">
+                    <h3 id="total-products">{{ products|length }}</h3>
+                    <p>Productos</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-info">
+                    <h3 id="total-stock">0</h3>
+                    <p>Stock Total</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⚠️</div>
+                <div class="stat-info">
+                    <h3 id="low-stock">0</h3>
+                    <p>Stock Bajo</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-info">
+                    <h3 id="total-value">₲ 0</h3>
+                    <p>Valor Total</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="search-box">
+                <input type="text" id="search" placeholder="Buscar producto...">
+            </div>
+            <select class="filter-select" id="category-filter">
+                <option value="">Todas las categorías</option>
+            </select>
+            <select class="filter-select" id="stock-filter">
+                <option value="">Todo el stock</option>
+                <option value="high">Stock alto (>50)</option>
+                <option value="medium">Stock medio (10-50)</option>
+                <option value="low">Stock bajo (<10)</option>
+            </select>
+        </div>
+
+        <!-- Table -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th>País</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="products-table">
+                    {% for product in products %}
+                    <tr data-code="{{ product.codigo }}" data-category="{{ product.categoria }}" data-stock="{{ product.stock }}">
+                        <td>
+                            <div class="product-info">
+                                <div class="product-barcode">
+                                    <svg class="barcode-mini" data-code="{{ product.codigo }}"></svg>
+                                </div>
+                                <div>
+                                    <div class="product-name">{{ product.nombre }}</div>
+                                    <div class="product-code">{{ product.codigo }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="category-badge">{{ product.categoria }}</span></td>
+                        <td>{{ product.pais }}</td>
+                        <td class="price">₲ {{ "{:,.0f}".format(product.precio|int) }}</td>
+                        <td>
+                            {% set stock = product.stock|int %}
+                            {% if stock > 50 %}
+                            <span class="stock-badge high">{{ product.stock }}</span>
+                            {% elif stock > 10 %}
+                            <span class="stock-badge medium">{{ product.stock }}</span>
+                            {% else %}
+                            <span class="stock-badge low">{{ product.stock }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn-icon btn-print" onclick="previewBarcode('{{ product.codigo }}', '{{ product.nombre }}', '{{ product.precio }}', '{{ product.categoria }}')" title="Ver código de barras">🏷️</button>
+                                <button class="btn-icon btn-edit" onclick="editProduct('{{ product.codigo }}')" title="Editar">✏️</button>
+                                <button class="btn-icon btn-delete" onclick="deleteProduct('{{ product.codigo }}')" title="Eliminar">🗑️</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if not products %}
+            <div class="empty-state">
+                <div class="icon">📭</div>
+                <p>No hay productos en el inventario</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Barcode Preview Modal -->
+    <div class="modal-overlay" id="barcode-modal">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>🏷️ Código de Barras</h3>
+                <button class="modal-close" onclick="closeBarcodeModal()">✕</button>
+            </div>
+            <div class="barcode-preview" id="barcode-preview-content">
+                <div class="barcode-preview-info">
+                    <h4 id="barcode-product-name"></h4>
+                    <div class="product-code" id="barcode-product-code"></div>
+                    <div class="product-details">
+                        <div id="barcode-product-category"></div>
+                        <div>Precio: <span class="price" id="barcode-product-price"></span></div>
+                    </div>
+                </div>
+                <svg id="barcode-preview-svg"></svg>
+                <div class="barcode-actions">
+                    <button class="btn btn-secondary" onclick="closeBarcodeModal()">Cerrar</button>
+                    <button class="btn btn-primary" onclick="printBarcode()">🖨️ Imprimir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>✏️ Editar Producto</h3>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <form id="edit-form">
+                <input type="hidden" id="edit-codigo">
+                <div class="form-group">
+                    <label>Nombre del Producto</label>
+                    <input type="text" id="edit-nombre" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Precio (₲)</label>
+                        <input type="number" id="edit-precio" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Stock</label>
+                        <input type="number" id="edit-stock" required>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Generar mini códigos de barras
+        document.querySelectorAll('.barcode-mini').forEach(svg => {
+            const code = svg.dataset.code;
+            try {
+                JsBarcode(svg, code, {
+                    format: "CODE128",
+                    width: 1,
+                    height: 40,
+                    displayValue: false,
+                    margin: 0
+                });
+            } catch(e) {
+                console.error('Error generating barcode:', e);
+            }
+        });
+
+        // Calcular estadísticas
+        function updateStats() {
+            const rows = document.querySelectorAll('#products-table tr');
+            let totalStock = 0;
+            let lowStock = 0;
+            let totalValue = 0;
+            const categories = new Set();
+
+            rows.forEach(row => {
+                const stock = parseInt(row.dataset.stock) || 0;
+                const priceText = row.querySelector('.price')?.textContent || '0';
+                const price = parseInt(priceText.replace(/[^\d]/g, '')) || 0;
+                
+                totalStock += stock;
+                totalValue += price * stock;
+                if (stock < 10) lowStock++;
+                
+                const category = row.dataset.category;
+                if (category) categories.add(category);
+            });
+
+            document.getElementById('total-stock').textContent = totalStock.toLocaleString();
+            document.getElementById('low-stock').textContent = lowStock;
+            document.getElementById('total-value').textContent = '₲ ' + totalValue.toLocaleString();
+
+            // Populate category filter
+            const categoryFilter = document.getElementById('category-filter');
+            categories.forEach(cat => {
+                if (!categoryFilter.querySelector(`option[value="${cat}"]`)) {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    categoryFilter.appendChild(option);
+                }
+            });
+        }
+
+        updateStats();
+
+        // Search and filter
+        const searchInput = document.getElementById('search');
+        const categoryFilter = document.getElementById('category-filter');
+        const stockFilter = document.getElementById('stock-filter');
+
+        function filterProducts() {
+            const search = searchInput.value.toLowerCase();
+            const category = categoryFilter.value;
+            const stockLevel = stockFilter.value;
+            const rows = document.querySelectorAll('#products-table tr');
+
+            rows.forEach(row => {
+                const name = row.querySelector('.product-name')?.textContent.toLowerCase() || '';
+                const code = row.dataset.code?.toLowerCase() || '';
+                const cat = row.dataset.category || '';
+                const stock = parseInt(row.dataset.stock) || 0;
+
+                let show = true;
+
+                // Search filter
+                if (search && !name.includes(search) && !code.includes(search)) {
+                    show = false;
+                }
+
+                // Category filter
+                if (category && cat !== category) {
+                    show = false;
+                }
+
+                // Stock filter
+                if (stockLevel === 'high' && stock <= 50) show = false;
+                if (stockLevel === 'medium' && (stock < 10 || stock > 50)) show = false;
+                if (stockLevel === 'low' && stock >= 10) show = false;
+
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        searchInput.addEventListener('input', filterProducts);
+        categoryFilter.addEventListener('change', filterProducts);
+        stockFilter.addEventListener('change', filterProducts);
+
+        // Edit product
+        async function editProduct(code) {
+            const response = await fetch(`/api/product/${code}`);
+            const data = await response.json();
+
+            if (data.success) {
+                const product = data.product;
+                document.getElementById('edit-codigo').value = product.codigo;
+                document.getElementById('edit-nombre').value = product.nombre;
+                document.getElementById('edit-precio').value = product.precio;
+                document.getElementById('edit-stock').value = product.stock;
+                document.getElementById('edit-modal').classList.add('active');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('edit-modal').classList.remove('active');
+        }
+
+        document.getElementById('edit-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const code = document.getElementById('edit-codigo').value;
+            
+            const data = {
+                nombre: document.getElementById('edit-nombre').value,
+                precio: document.getElementById('edit-precio').value,
+                stock: document.getElementById('edit-stock').value
+            };
+
+            const response = await fetch(`/api/product/${code}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        });
+
+        // Delete product
+        async function deleteProduct(code) {
+            if (!confirm('¿Estás seguro de eliminar este producto?')) return;
+
+            const response = await fetch(`/api/product/${code}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        }
+
+        // Close modal on outside click
+        document.getElementById('edit-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Barcode preview
+        let currentBarcodeData = null;
+
+        function previewBarcode(code, name, price, category) {
+            currentBarcodeData = { code, name, price, category };
+            
+            document.getElementById('barcode-product-name').textContent = name;
+            document.getElementById('barcode-product-code').textContent = code;
+            document.getElementById('barcode-product-category').textContent = `Categoría: ${category}`;
+            document.getElementById('barcode-product-price').textContent = `₲ ${parseInt(price).toLocaleString()}`;
+
+            const svg = document.getElementById('barcode-preview-svg');
+            svg.innerHTML = ''; // Clear previous barcode
+            
+            try {
+                JsBarcode(svg, code, {
+                    format: "CODE128",
+                    width: 3,
+                    height: 100,
+                    displayValue: true,
+                    fontSize: 20,
+                    margin: 10,
+                    background: "#ffffff",
+                    lineColor: "#000000"
+                });
+                document.getElementById('barcode-modal').classList.add('active');
+            } catch(e) {
+                console.error('Error generating barcode:', e);
+                alert('Error al generar el código de barras');
+            }
+        }
+
+        function closeBarcodeModal() {
+            document.getElementById('barcode-modal').classList.remove('active');
+        }
+
+        function printBarcode() {
+            if (!currentBarcodeData) return;
+
+            // Create print window
+            const printWindow = window.open('', '_blank');
+            const code = currentBarcodeData.code;
+            const name = currentBarcodeData.name;
+            const price = currentBarcodeData.price;
+            const category = currentBarcodeData.category;
+
+            // Create SVG for printing
+            const printSvg = document.createElement('svg');
+            printSvg.id = 'print-barcode';
+            
+            // Generate barcode in new context
+            setTimeout(() => {
+                JsBarcode(printSvg, code, {
+                    format: "CODE128",
+                    width: 3,
+                    height: 100,
+                    displayValue: true,
+                    fontSize: 20,
+                    margin: 10,
+                    background: "#ffffff",
+                    lineColor: "#000000"
+                });
+
+                const barcodeHTML = printSvg.outerHTML;
+
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Imprimir Código de Barras - ${name}</title>
+                        <style>
+                            @page {
+                                size: A4;
+                                margin: 20mm;
+                            }
+                            body {
+                                font-family: Arial, sans-serif;
+                                padding: 40px;
+                                text-align: center;
+                            }
+                            .barcode-container {
+                                display: inline-block;
+                                padding: 30px;
+                                border: 2px solid #000;
+                                border-radius: 10px;
+                                margin: 20px 0;
+                            }
+                            .product-name {
+                                font-size: 24px;
+                                font-weight: bold;
+                                margin-bottom: 10px;
+                            }
+                            .product-code {
+                                font-family: 'Courier New', monospace;
+                                font-size: 18px;
+                                color: #666;
+                                margin-bottom: 20px;
+                            }
+                            .product-info {
+                                margin-top: 20px;
+                                font-size: 14px;
+                                color: #333;
+                            }
+                            svg {
+                                background: white;
+                                padding: 15px;
+                                display: block;
+                                margin: 0 auto;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="barcode-container">
+                            <div class="product-name">${name}</div>
+                            <div class="product-code">Código: ${code}</div>
+                            ${barcodeHTML}
+                            <div class="product-info">
+                                <div>Categoría: ${category}</div>
+                                <div>Precio: ₲ ${parseInt(price).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <script>
+                            window.onload = function() {
+                                window.print();
+                                window.onafterprint = function() {
+                                    window.close();
+                                };
+                            };
+                        </script>
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+            }, 100);
+        }
+
+        // Close barcode modal on outside click
+        document.getElementById('barcode-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeBarcodeModal();
+        });
+
+        // Bulk print function
+        function printMultipleBarcodes() {
+            const selected = prompt('Ingrese los códigos de barras separados por comas, o deje vacío para imprimir todos:');
+            let codesToPrint = [];
+
+            if (!selected || selected.trim() === '') {
+                // Print all products
+                const rows = document.querySelectorAll('#products-table tr');
+                rows.forEach(function(row) {
+                    codesToPrint.push({
+                        code: row.dataset.code,
+                        name: row.querySelector('.product-name') ? row.querySelector('.product-name').textContent : '',
+                        price: row.querySelector('.price') ? row.querySelector('.price').textContent.replace(/[^\d]/g, '') : '0',
+                        category: row.dataset.category || ''
+                    });
+                });
+            } else {
+                // Print selected codes
+                const codes = selected.split(',').map(function(c) { return c.trim(); });
+                codes.forEach(function(code) {
+                    const product = Array.from(document.querySelectorAll('#products-table tr')).find(
+                        function(row) { return row.dataset.code === code; }
+                    );
+                    if (product) {
+                        codesToPrint.push({
+                            code: code,
+                            name: product.querySelector('.product-name') ? product.querySelector('.product-name').textContent : '',
+                            price: product.querySelector('.price') ? product.querySelector('.price').textContent.replace(/[^\d]/g, '') : '0',
+                            category: product.dataset.category || ''
+                        });
+                    }
+                });
+            }
+
+            if (codesToPrint.length === 0) {
+                alert('No se encontraron productos para imprimir');
+                return;
+            }
+
+            // Helper function to escape HTML
+            function escapeHtml(text) {
+                if (!text) return '';
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+            }
+
+            // Create a temporary container for SVGs (off-screen)
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.left = '-9999px';
+            tempContainer.style.visibility = 'hidden';
+            document.body.appendChild(tempContainer);
+
+            // Generate all barcodes
+            const svgElements = [];
+            codesToPrint.forEach(function(item, index) {
+                const svg = document.createElement('svg');
+                svg.id = 'temp-barcode-' + index;
+                tempContainer.appendChild(svg);
+                svgElements.push({ svg: svg, item: item });
+                
+                try {
+                    JsBarcode(svg, item.code, {
+                        format: "CODE128",
+                        width: 2,
+                        height: 80,
+                        displayValue: true,
+                        fontSize: 16,
+                        margin: 5,
+                        background: "#ffffff",
+                        lineColor: "#000000"
+                    });
+                } catch(e) {
+                    console.error('Error generating barcode for', item.code, e);
+                }
+            });
+
+            // Wait a bit for all barcodes to render, then build print content
+            setTimeout(function() {
+                // Build print content
+                let printContent = '<!DOCTYPE html><html><head><title>Imprimir Códigos de Barras</title><style>';
+                printContent += '@page { size: A4; margin: 10mm; }';
+                printContent += 'body { font-family: Arial, sans-serif; padding: 20px; }';
+                printContent += '.barcode-item { display: inline-block; width: 48%; margin: 1%; padding: 20px; border: 1px solid #000; border-radius: 5px; text-align: center; page-break-inside: avoid; vertical-align: top; }';
+                printContent += '.product-name { font-size: 18px; font-weight: bold; margin-bottom: 8px; }';
+                printContent += '.product-code { font-family: "Courier New", monospace; font-size: 14px; color: #666; margin-bottom: 10px; }';
+                printContent += 'svg { background: white; padding: 10px; display: block; margin: 0 auto; max-width: 100%; }';
+                printContent += '.product-info { margin-top: 10px; font-size: 12px; color: #333; }';
+                printContent += '</style></head><body>';
+
+                svgElements.forEach(function(element) {
+                    const item = element.item;
+                    const svgHTML = element.svg.outerHTML;
+                    
+                    printContent += '<div class="barcode-item">';
+                    printContent += '<div class="product-name">' + escapeHtml(item.name) + '</div>';
+                    printContent += '<div class="product-code">' + escapeHtml(item.code) + '</div>';
+                    printContent += svgHTML;
+                    printContent += '<div class="product-info">';
+                    if (item.category) {
+                        printContent += 'Categoría: ' + escapeHtml(item.category) + '<br>';
+                    }
+                    printContent += 'Precio: ₲ ' + parseInt(item.price).toLocaleString();
+                    printContent += '</div></div>';
+                });
+
+                printContent += '</body></html>';
+
+                // Clean up temporary container
+                document.body.removeChild(tempContainer);
+
+                // Open print window and write content
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(printContent);
+                printWindow.document.close();
+
+                // Wait for content to load, then print
+                setTimeout(function() {
+                    printWindow.print();
+                }, 300);
+            }, 200);
+        }
+
+        // Add print all button to toolbar
+        window.addEventListener('DOMContentLoaded', function() {
+            const toolbar = document.querySelector('.toolbar');
+            if (toolbar) {
+                const printAllBtn = document.createElement('button');
+                printAllBtn.className = 'btn btn-primary';
+                printAllBtn.textContent = '🖨️ Imprimir Códigos';
+                printAllBtn.onclick = printMultipleBarcodes;
+                printAllBtn.style.cssText = 'margin-left: auto; white-space: nowrap;';
+                toolbar.appendChild(printAllBtn);
+            }
+        });
+    </script>
+</body>
+</html>
