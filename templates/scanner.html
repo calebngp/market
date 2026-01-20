@@ -1158,14 +1158,16 @@
                 try {
                     await html5QrCode.stop();
                     isScanning = false;
-                    
                     document.getElementById('start-btn').disabled = false;
                     document.getElementById('stop-btn').disabled = true;
                     updateStatus(false);
+                    return true;
                 } catch (err) {
-                    console.error("Error al detener:", err);
+                    console.error("Error al detener el escáner:", err);
+                    return false;
                 }
             }
+            return true; // Si no hay escáner activo, retornamos true
         }
 
         function onScanSuccess(decodedText, decodedResult) {
@@ -1217,6 +1219,11 @@
                 document.getElementById('no-result').style.display = 'none';
                 
                 if (data.success) {
+                    // Detener el escáner cuando se encuentra un producto
+                    if (isScanning) {
+                        await stopScanner();
+                    }
+
                     document.getElementById('error-message').classList.remove('active');
                     document.getElementById('result-container').classList.add('active');
                     
@@ -1396,21 +1403,53 @@
             document.getElementById('purchase-section').style.display = 'block';
         }
 
-        // Inicializar cámara facial silenciosa
+        // Inicializar cámara facial
         async function initFacialCamera() {
             if (facialCameraInitialized) return;
             
             try {
-                facialStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'user' } 
-                });
+                // Siempre usar la cámara frontal para reconocimiento facial
+                const constraints = {
+                    video: {
+                        facingMode: 'user', // Siempre usar cámara frontal
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                };
+                
+                // Intentar con la cámara frontal
+                facialStream = await navigator.mediaDevices.getUserMedia(constraints);
+                
                 const video = document.getElementById('hidden-facial-video');
                 video.srcObject = facialStream;
+                
+                // Esperar a que el video esté listo
+                await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => {
+                        reject(new Error('Tiempo de espera agotado para inicializar la cámara'));
+                    }, 5000); // 5 segundos de tiempo de espera
+                    
+                    video.onloadedmetadata = () => {
+                        clearTimeout(timer);
+                        video.play().then(resolve).catch(reject);
+                    };
+                    
+                    video.onerror = () => {
+                        clearTimeout(timer);
+                        reject(new Error('Error al reproducir el video'));
+                    };
+                });
+                
                 facialCameraInitialized = true;
-                console.log('Cámara facial inicializada silenciosamente');
+                console.log('Cámara frontal inicializada correctamente');
             } catch (error) {
-                console.warn('No se pudo inicializar la cámara facial:', error);
-                // Continuar sin reconocimiento facial si no hay cámara disponible
+                console.error('Error al inicializar la cámara frontal:', error);
+                // Limpiar en caso de error
+                if (facialStream) {
+                    facialStream.getTracks().forEach(track => track.stop());
+                    facialStream = null;
+                }
+                throw new Error('No se pudo acceder a la cámara frontal. Asegúrate de permitir el acceso.');
             }
         }
 
@@ -1438,61 +1477,83 @@
                 return;
             }
 
-            // Mostrar modal de reconocimiento facial
-            openFacialModal();
+            try {
+                // Forzar la limpieza de cualquier stream de cámara existente
+                if (window.stream) {
+                    window.stream.getTracks().forEach(track => track.stop());
+                    window.stream = null;
+                }
+                
+                // Detener el escáner
+                await stopScanner();
+                
+                // Limpiar cualquier stream de cámara facial previo
+                if (facialStream) {
+                    facialStream.getTracks().forEach(track => track.stop());
+                    facialStream = null;
+                }
+                facialCameraInitialized = false;
 
-            // Inicializar cámara facial si no está inicializada
-            if (!facialCameraInitialized) {
+                // Pequeña pausa para asegurar que los recursos se liberen
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Mostrar modal de reconocimiento facial
+                openFacialModal();
+
+                // Inicializar cámara facial
                 try {
                     await initFacialCamera();
                 } catch (error) {
-                    showFacialError('No se pudo acceder a la cámara. Por favor, permite el acceso.');
+                    console.error('Error al inicializar cámara frontal:', error);
+                    showFacialError('No se pudo acceder a la cámara frontal. Por favor, permite el acceso.');
                     return;
                 }
-            }
 
-            // Esperar un momento para que el video se inicialice
-            await new Promise(resolve => setTimeout(resolve, 500));
+                // Esperar un momento para que el video se inicialice
+                await new Promise(resolve => setTimeout(resolve, 1000));
 
-            // Capturar rostro
-            let facialImage = null;
-            if (facialCameraInitialized) {
-                facialImage = captureFacialFrame();
-            }
+                // Capturar rostro
+                let facialImage = captureFacialFrame();
+                if (!facialImage) {
+                    showFacialError('No se pudo capturar el rostro. Por favor, intenta nuevamente.');
+                    return;
+                }
 
-            if (!facialImage) {
-                showFacialError('No se pudo capturar el rostro. Por favor, intenta nuevamente.');
-                return;
-            }
+                // Reconocer o crear usuario
+                try {
+                    const response = await fetch('/api/purchase/recognize', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            facial_image: facialImage,
+                            product_code: currentProduct.codigo
+                        })
+                    });
 
-            // Reconocer o crear usuario
-            try {
-                const response = await fetch('/api/purchase/recognize', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        facial_image: facialImage,
-                        product_code: currentProduct.codigo
-                    })
-                });
+                    const data = await response.json();
 
-                const data = await response.json();
-
-                if (data.success) {
-                    // Guardar datos del usuario en variable global y en atributos del modal
-                    recognizedUserData = data;
-                    document.getElementById('confirm-purchase-btn').setAttribute('data-user-id', data.user.id);
-                    document.getElementById('confirm-purchase-btn').setAttribute('data-user-name', data.user.nombre);
-                    document.getElementById('confirm-purchase-btn').setAttribute('data-user-points', data.user.puntos);
-                    showFacialUserInfo(data.user, currentProduct);
-                } else {
-                    showFacialError(data.message || 'Error al identificar usuario');
+                    if (data.success) {
+                        // Guardar datos del usuario en variable global y en atributos del modal
+                        recognizedUserData = data;
+                        const btn = document.getElementById('confirm-purchase-btn');
+                        if (btn) {
+                            btn.setAttribute('data-user-id', data.user.id);
+                            btn.setAttribute('data-user-name', data.user.nombre);
+                            btn.setAttribute('data-user-points', data.user.puntos);
+                        }
+                        showFacialUserInfo(data.user, currentProduct);
+                    } else {
+                        showFacialError(data.message || 'Error al identificar usuario');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showFacialError('Error al identificar usuario. Por favor, intenta nuevamente.');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showFacialError('Error al identificar usuario. Por favor, intenta nuevamente.');
+                console.error('Error en purchaseWithPoints:', error);
+                showFacialError('Ocurrió un error inesperado. Por favor, inténtalo de nuevo.');
             }
         }
 
@@ -1504,14 +1565,29 @@
             document.getElementById('facial-modal-actions').style.display = 'none';
         }
 
-        function closeFacialModal() {
+        function closeFacialModal(restartScanner = true) {
             document.getElementById('facial-recognition-modal').classList.remove('active');
             recognizedUserData = null;
+            
+            // Detener la cámara facial
+            if (facialStream) {
+                facialStream.getTracks().forEach(track => track.stop());
+                facialStream = null;
+            }
+            facialCameraInitialized = false;
+            
             // Limpiar atributos del botón
             const btn = document.getElementById('confirm-purchase-btn');
             btn.removeAttribute('data-user-id');
             btn.removeAttribute('data-user-name');
             btn.removeAttribute('data-user-points');
+            
+            // Volver a iniciar el escáner si es necesario
+            if (restartScanner && !isScanning) {
+                startScanner().catch(err => {
+                    console.error('Error al reiniciar el escáner:', err);
+                });
+            }
         }
 
         function showFacialUserInfo(user, product) {
