@@ -37,6 +37,7 @@
             min-height: 100vh;
         }
 
+        /* Animated background */
         .bg-pattern {
             position: fixed;
             top: 0;
@@ -44,8 +45,22 @@
             width: 100%;
             height: 100%;
             background: 
-                radial-gradient(ellipse at 30% 20%, rgba(0, 217, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(ellipse at 70% 80%, rgba(255, 107, 53, 0.05) 0%, transparent 50%);
+                radial-gradient(ellipse at 20% 20%, rgba(0, 217, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(255, 107, 53, 0.06) 0%, transparent 50%),
+                linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            z-index: -1;
+        }
+
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 217, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 217, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
             z-index: -1;
         }
 
@@ -508,12 +523,47 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
+            gap: 12px;
         }
 
         .history-header h3 {
             font-size: 1.1rem;
             font-weight: 600;
             color: var(--text-primary);
+        }
+
+        .history-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .select-all {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .select-all input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        /* El botón de pago masivo ya no se usa (el botón principal compra 1 o varios productos seleccionados) */
+        .bulk-pay-btn {
+            display: none;
         }
 
         .history-list {
@@ -532,6 +582,25 @@
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .history-item-checkbox {
+            margin-top: 4px;
+        }
+
+        .history-item-checkbox input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .history-item-content {
+            flex: 1;
+            min-width: 0;
         }
 
         .history-item:hover {
@@ -869,6 +938,7 @@
 </head>
 <body>
     <div class="bg-pattern"></div>
+    <div class="grid-overlay"></div>
     
     <nav class="navbar">
         <a href="/" class="nav-brand">
@@ -1009,10 +1079,16 @@
 
                         <!-- Scanned Products History -->
                         <div class="scanned-products-history" id="history-section" style="display: none;">
-                            <div class="history-header">
-                                <h3>📋 Productos Escaneados</h3>
+                        <div class="history-header">
+                            <h3>📋 Productos Escaneados</h3>
+                            <div class="history-actions">
+                                <label class="select-all" onclick="event.stopPropagation()">
+                                    <input type="checkbox" id="select-all-history" onchange="toggleSelectAllHistory(event)">
+                                    Seleccionar todo
+                                </label>
                                 <button class="clear-history-btn" onclick="clearHistory()">Limpiar</button>
                             </div>
+                        </div>
                             <div class="history-list" id="history-list">
                                 <!-- History items will be added here -->
                             </div>
@@ -1099,6 +1175,7 @@
         let currentProduct = null;
         let scannedProductsHistory = [];
         let activeHistoryIndex = -1;
+        let selectedHistoryCodes = new Set();
         let facialStream = null;
         let facialCameraInitialized = false;
 
@@ -1331,19 +1408,70 @@
                 historyItem.className = `history-item ${index === activeHistoryIndex ? 'active' : ''}`;
                 historyItem.onclick = () => viewHistoryProduct(index);
                 
+                const checked = selectedHistoryCodes.has(product.codigo);
                 historyItem.innerHTML = `
-                    <div class="history-item-header">
-                        <div class="history-item-name">${product.nombre}</div>
-                        <div class="history-item-code">${product.codigo}</div>
+                    <div class="history-item-checkbox" onclick="event.stopPropagation()">
+                        <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleHistorySelection(event, '${product.codigo}')">
                     </div>
-                    <div class="history-item-details">
-                        <div class="history-item-price">₲ ${formatNumber(product.precio)}</div>
-                        <div class="history-item-points">⭐ ${(product.puntos || 0).toLocaleString('es-PY')} pts</div>
+                    <div class="history-item-content">
+                        <div class="history-item-header">
+                            <div class="history-item-name">${product.nombre}</div>
+                            <div class="history-item-code">${product.codigo}</div>
+                        </div>
+                        <div class="history-item-details">
+                            <div class="history-item-price">₲ ${formatNumber(product.precio)}</div>
+                            <div class="history-item-points">⭐ ${(product.puntos || 0).toLocaleString('es-PY')} pts</div>
+                        </div>
                     </div>
                 `;
                 
                 historyList.appendChild(historyItem);
             });
+
+            syncSelectAllCheckbox();
+            updateBulkActionsUI();
+        }
+
+        function toggleHistorySelection(e, code) {
+            // Evitar que el click seleccione el producto como activo
+            if (e && e.stopPropagation) e.stopPropagation();
+            if (selectedHistoryCodes.has(code)) {
+                selectedHistoryCodes.delete(code);
+            } else {
+                selectedHistoryCodes.add(code);
+            }
+            syncSelectAllCheckbox();
+            updateBulkActionsUI();
+        }
+
+        function toggleSelectAllHistory(e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            const checked = !!(e && e.target && e.target.checked);
+            if (checked) {
+                scannedProductsHistory.forEach(p => selectedHistoryCodes.add(p.codigo));
+            } else {
+                selectedHistoryCodes.clear();
+            }
+            updateHistoryDisplay();
+        }
+
+        function syncSelectAllCheckbox() {
+            const cb = document.getElementById('select-all-history');
+            if (!cb) return;
+            if (scannedProductsHistory.length === 0) {
+                cb.checked = false;
+                cb.indeterminate = false;
+                return;
+            }
+            const selectedCount = scannedProductsHistory.filter(p => selectedHistoryCodes.has(p.codigo)).length;
+            cb.checked = selectedCount === scannedProductsHistory.length;
+            cb.indeterminate = selectedCount > 0 && selectedCount < scannedProductsHistory.length;
+        }
+
+        function updateBulkActionsUI() {
+            // Ya no hay un botón separado de "Pagar seleccionados".
+            // El botón principal "Comprar por Puntos" tomará en cuenta
+            // los productos seleccionados del historial si existen.
         }
 
         function viewHistoryProduct(index) {
@@ -1366,6 +1494,7 @@
             if (confirm('¿Deseas limpiar el historial de productos escaneados?')) {
                 scannedProductsHistory = [];
                 activeHistoryIndex = -1;
+                selectedHistoryCodes.clear();
                 updateHistoryDisplay();
             }
         }
@@ -1472,7 +1601,9 @@
         let recognizedUserData = null;
 
         async function purchaseWithPoints() {
-            if (!currentProduct) {
+            const selectedProducts = scannedProductsHistory.filter(p => selectedHistoryCodes.has(p.codigo));
+
+            if (!currentProduct && selectedProducts.length === 0) {
                 alert('No hay producto seleccionado');
                 return;
             }
@@ -1528,7 +1659,7 @@
                         },
                         body: JSON.stringify({
                             facial_image: facialImage,
-                            product_code: currentProduct.codigo
+                            product_code: currentProduct ? currentProduct.codigo : (selectedProducts[0] ? selectedProducts[0].codigo : null)
                         })
                     });
 
@@ -1543,7 +1674,17 @@
                             btn.setAttribute('data-user-name', data.user.nombre);
                             btn.setAttribute('data-user-points', data.user.puntos);
                         }
-                        showFacialUserInfo(data.user, currentProduct);
+                        // Si hay múltiples seleccionados, mostrar el total en el modal
+                        if (selectedProducts.length > 0) {
+                            const totalPuntos = selectedProducts.reduce((sum, p) => sum + (p.puntos || 0), 0);
+                            const multiProduct = {
+                                nombre: `${selectedProducts.length} producto(s) seleccionado(s)`,
+                                puntos: totalPuntos
+                            };
+                            showFacialUserInfo(data.user, multiProduct);
+                        } else {
+                            showFacialUserInfo(data.user, currentProduct);
+                        }
                     } else {
                         showFacialError(data.message || 'Error al identificar usuario');
                     }
@@ -1556,6 +1697,9 @@
                 showFacialError('Ocurrió un error inesperado. Por favor, inténtalo de nuevo.');
             }
         }
+
+        // purchaseSelectedWithPoints ya no es necesario; el botón principal
+        // "Comprar por Puntos" usa los productos seleccionados si existen.
 
         function openFacialModal() {
             document.getElementById('facial-recognition-modal').classList.add('active');
@@ -1634,7 +1778,10 @@
         }
 
         async function confirmPurchaseAfterRecognition() {
-            if (!currentProduct) {
+            const selectedProducts = scannedProductsHistory.filter(p => selectedHistoryCodes.has(p.codigo));
+            const isMulti = selectedProducts.length > 0;
+
+            if (!currentProduct && !isMulti) {
                 alert('No hay producto seleccionado');
                 return;
             }
@@ -1652,57 +1799,124 @@
                 return;
             }
 
-            const puntosNecesarios = currentProduct.puntos || 0;
-            if (userPoints < puntosNecesarios) {
-                alert(`Puntos insuficientes. Necesitas ${puntosNecesarios} puntos, tienes ${userPoints}`);
-                return;
-            }
-
             closeFacialModal();
 
             try {
-                const response = await fetch('/api/purchase', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        product_code: currentProduct.codigo,
-                        user_id: userId
-                    })
-                });
+                if (isMulti) {
+                    // Pagar todos los productos seleccionados
+                    const totalPuntos = selectedProducts.reduce((sum, p) => sum + (p.puntos || 0), 0);
+                    if (userPoints < totalPuntos) {
+                        alert(`Puntos insuficientes. Necesitas ${totalPuntos.toLocaleString('es-PY')} puntos, tienes ${userPoints.toLocaleString('es-PY')}`);
+                        return;
+                    }
 
-                const data = await response.json();
+                    const results = [];
+                    let puntosActuales = userPoints;
 
-                if (data.success) {
-                    const purchase = data.purchase;
-                    const reintegro = purchase.reintegro;
-                    
+                    for (const p of selectedProducts) {
+                        const resp = await fetch('/api/purchase', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                product_code: p.codigo,
+                                user_id: userId
+                            })
+                        });
+                        const data = await resp.json();
+                        results.push({ product: p, data });
+
+                        if (data && data.success && data.purchase) {
+                            puntosActuales = data.purchase.puntos_nuevos;
+                        }
+                    }
+
                     // Actualizar usuario con los nuevos puntos
-                    if (currentUser && currentUser.id === userId) {
-                        currentUser.puntos = purchase.puntos_nuevos;
-                    } else {
+                    if (!currentUser || currentUser.id !== userId) {
                         currentUser = {
                             id: userId,
                             nombre: userName,
-                            puntos: purchase.puntos_nuevos
+                            puntos: puntosActuales
                         };
+                    } else {
+                        currentUser.puntos = puntosActuales;
                     }
                     updateUserDisplay();
-                    
-                    // Mostrar mensaje de éxito
-                    alert(`✅ Compra realizada exitosamente!\n\n` +
-                          `Usuario: ${userName}\n` +
-                          `Producto: ${purchase.product}\n` +
-                          `Puntos usados: ${purchase.puntos_usados}\n` +
-                          `Reintegro: +${reintegro} puntos\n` +
-                          `Puntos anteriores: ${purchase.puntos_anteriores}\n` +
-                          `Puntos actuales: ${purchase.puntos_nuevos}`);
-                    
-                    // Actualizar sección de compra con los nuevos puntos
                     updatePurchaseSection();
+
+                    const ok = results.filter(r => r.data && r.data.success).length;
+                    const fail = results.length - ok;
+                    const failLines = results
+                        .filter(r => !r.data || !r.data.success)
+                        .slice(0, 5)
+                        .map(r => `- ${r.product.nombre} (${r.product.codigo}): ${(r.data && r.data.message) ? r.data.message : 'Error desconocido'}`)
+                        .join('\n');
+
+                    alert(
+                        `✅ Pagos procesados\n\n` +
+                        `Usuario: ${userName}\n` +
+                        `Productos: ${selectedProducts.length}\n` +
+                        `Éxitos: ${ok}\n` +
+                        `Fallos: ${fail}\n` +
+                        `Puntos actuales: ${puntosActuales.toLocaleString('es-PY')}\n` +
+                        (fail > 0 ? `\nDetalles (máx 5):\n${failLines}` : '')
+                    );
+
+                    // Limpiar selección después de pagar
+                    selectedHistoryCodes.clear();
+                    updateHistoryDisplay();
                 } else {
-                    alert('Error: ' + data.message);
+                    // Compra de un solo producto (comportamiento original)
+                    const puntosNecesarios = currentProduct.puntos || 0;
+                    if (userPoints < puntosNecesarios) {
+                        alert(`Puntos insuficientes. Necesitas ${puntosNecesarios} puntos, tienes ${userPoints}`);
+                        return;
+                    }
+
+                    const response = await fetch('/api/purchase', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            product_code: currentProduct.codigo,
+                            user_id: userId
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const purchase = data.purchase;
+                        const reintegro = purchase.reintegro;
+                        
+                        // Actualizar usuario con los nuevos puntos
+                        if (currentUser && currentUser.id === userId) {
+                            currentUser.puntos = purchase.puntos_nuevos;
+                        } else {
+                            currentUser = {
+                                id: userId,
+                                nombre: userName,
+                                puntos: purchase.puntos_nuevos
+                            };
+                        }
+                        updateUserDisplay();
+                        
+                        // Mostrar mensaje de éxito
+                        alert(`✅ Compra realizada exitosamente!\n\n` +
+                              `Usuario: ${userName}\n` +
+                              `Producto: ${purchase.product}\n` +
+                              `Puntos usados: ${purchase.puntos_usados}\n` +
+                              `Reintegro: +${reintegro} puntos\n` +
+                              `Puntos anteriores: ${purchase.puntos_anteriores}\n` +
+                              `Puntos actuales: ${purchase.puntos_nuevos}`);
+                        
+                        // Actualizar sección de compra con los nuevos puntos
+                        updatePurchaseSection();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
                 }
             } catch (error) {
                 console.error('Error:', error);

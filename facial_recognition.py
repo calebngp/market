@@ -4,7 +4,6 @@ Módulo de Reconocimiento Facial
 Usa la librería face_recognition para identificar usuarios
 """
 
-import face_recognition
 import numpy as np
 import json
 import os
@@ -52,6 +51,13 @@ def encode_face_from_image(image_data):
         encoding: Array numpy con el encoding del rostro, o None si no se encuentra rostro
     """
     try:
+        # Import lazy para evitar que el servidor crashee si face_recognition/dlib falla al cargar
+        try:
+            import face_recognition  # type: ignore
+        except Exception as e:
+            print(f"Reconocimiento facial deshabilitado: no se pudo importar face_recognition ({e})")
+            return None
+
         # Si es base64, decodificarlo
         if isinstance(image_data, str):
             if image_data.startswith('data:image'):
@@ -130,6 +136,17 @@ def recognize_face(image_data, tolerance=0.6):
     Returns:
         dict: {'success': bool, 'user_id': str o None, 'distance': float o None, 'message': str}
     """
+    # Import lazy para evitar crash al importar el módulo completo
+    try:
+        import face_recognition  # type: ignore
+    except Exception as e:
+        return {
+            'success': False,
+            'user_id': None,
+            'distance': None,
+            'message': f'Reconocimiento facial no disponible (error al cargar dependencias): {e}'
+        }
+
     # Codificar el rostro de la imagen
     encoding = encode_face_from_image(image_data)
     

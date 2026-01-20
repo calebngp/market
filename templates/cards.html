@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Tarjetas - Market</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --accent: #00d9ff;
+            --accent-glow: rgba(0, 217, 255, 0.3);
+            --accent-secondary: #ff6b35;
+            --text-primary: #ffffff;
+            --text-secondary: #8b8b9e;
+            --border: #2a2a3a;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(0, 217, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(255, 107, 53, 0.06) 0%, transparent 50%),
+                linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            z-index: -1;
+        }
+
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 217, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 217, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .back-button:hover {
+            border-color: var(--accent);
+            background: rgba(0, 217, 255, 0.1);
+            transform: translateX(-5px);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-card, .cards-list-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+        }
+
+        .form-card h2, .cards-list-card h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 14px 18px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card-number-input {
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .submit-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            border: none;
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px var(--accent-glow);
+        }
+
+        .submit-button:active {
+            transform: translateY(0);
+        }
+
+        .submit-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .cards-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .cards-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .cards-list::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+        }
+
+        .cards-list::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        .cards-list::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        .card-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .card-item:hover {
+            border-color: var(--accent);
+            transform: translateX(5px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-number {
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            font-family: 'Courier New', monospace;
+            color: var(--accent);
+        }
+
+        .card-type-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .card-type-badge.debito {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--success);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .card-type-badge.credito {
+            background: rgba(255, 107, 53, 0.2);
+            color: var(--accent-secondary);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+        }
+
+        .card-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .card-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .card-detail-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-detail-value {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .delete-button {
+            padding: 8px 16px;
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 8px;
+            color: var(--error);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .delete-button:hover {
+            background: rgba(255, 68, 68, 0.3);
+            transform: scale(1.05);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .scan-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .scan-options {
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 769px) {
+            .scan-options {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .scan-button {
+            padding: 24px;
+            background: var(--bg-secondary);
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .scan-button.primary {
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.15), rgba(0, 217, 255, 0.05));
+            border: 2px solid var(--accent);
+            border-style: solid;
+            box-shadow: 0 4px 20px rgba(0, 217, 255, 0.2);
+        }
+
+        .scan-button:hover {
+            border-color: var(--accent);
+            background: rgba(0, 217, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(0, 217, 255, 0.3);
+        }
+
+        .scan-button.primary:hover {
+            box-shadow: 0 8px 40px rgba(0, 217, 255, 0.4);
+        }
+
+        .scan-button.active {
+            border-color: var(--accent);
+            background: rgba(0, 217, 255, 0.25);
+            border-style: solid;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 4px 20px rgba(0, 217, 255, 0.3);
+            }
+            50% {
+                box-shadow: 0 6px 40px rgba(0, 217, 255, 0.5);
+            }
+        }
+
+        .scan-icon {
+            font-size: 2.5rem;
+        }
+
+        .scan-hint {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .nfc-info-note {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: rgba(255, 170, 0, 0.1);
+            border: 1px solid rgba(255, 170, 0, 0.3);
+            border-radius: 12px;
+            color: var(--warning);
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+
+        .nfc-info-note .info-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .scan-status {
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .scan-status.scanning {
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            color: var(--accent);
+        }
+
+        .scan-status.success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: var(--success);
+        }
+
+        .scan-status.error {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            color: var(--error);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-button:hover {
+            background: var(--bg-secondary);
+        }
+
+        .modal-body {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .camera-preview-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1.6;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #cameraPreview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .scan-frame {
+            width: 85%;
+            height: 55%;
+            border: 3px solid var(--accent);
+            border-radius: 12px;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+        }
+
+        .scan-instruction {
+            margin-top: 20px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .capture-button,
+        .cancel-button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .capture-button {
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            color: var(--text-primary);
+        }
+
+        .capture-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px var(--accent-glow);
+        }
+
+        .cancel-button {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .cancel-button:hover {
+            border-color: var(--accent);
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+
+        .message {
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: var(--success);
+        }
+
+        .message.error {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            color: var(--error);
+        }
+
+        @media (max-width: 968px) {
+            .page-layout {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    <div class="grid-overlay"></div>
+    
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <a href="/" class="back-button">
+                    ← Volver
+                </a>
+                <h1>💳 Registro de Tarjetas</h1>
+            </div>
+        </header>
+
+        <div id="message" class="message"></div>
+
+        <div class="page-layout">
+            <div class="form-card">
+                <h2>Nueva Tarjeta</h2>
+                
+                <!-- Botones de escaneo -->
+                <div class="scan-options">
+                    <button type="button" class="scan-button camera-button primary" id="cameraButton" onclick="startCameraScan()">
+                        <span class="scan-icon">📷</span>
+                        <span>Escanear Tarjeta</span>
+                        <span class="scan-hint">Toma una foto de tu tarjeta</span>
+                    </button>
+                    <button type="button" class="scan-button nfc-button" id="nfcButton" onclick="startNFCScan()" style="display: none;">
+                        <span class="scan-icon">📱</span>
+                        <span>Escanear con NFC</span>
+                        <span class="scan-hint">Aproxima la tarjeta al teléfono</span>
+                    </button>
+                </div>
+
+                <div id="scanStatus" class="scan-status" style="display: none;"></div>
+
+                <!-- Modal de escaneo con cámara -->
+                <div id="cameraModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Escanear Tarjeta</h3>
+                            <button class="close-button" onclick="closeCameraModal()">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="camera-preview-container">
+                                <video id="cameraPreview" autoplay playsinline></video>
+                                <canvas id="cameraCanvas" style="display: none;"></canvas>
+                                <div class="camera-overlay">
+                                    <div class="scan-frame"></div>
+                                    <p class="scan-instruction">Alinea la tarjeta dentro del marco</p>
+                                </div>
+                            </div>
+                            <div class="camera-controls">
+                                <button class="capture-button" onclick="captureCard()">📸 Capturar</button>
+                                <button class="cancel-button" onclick="closeCameraModal()">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="cardForm">
+                    <div class="form-group">
+                        <label for="numero_tarjeta">Número de Tarjeta</label>
+                        <input 
+                            type="text" 
+                            id="numero_tarjeta" 
+                            name="numero_tarjeta" 
+                            placeholder="1234 5678 9012 3456"
+                            maxlength="19"
+                            class="card-number-input"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cvv">CVV</label>
+                            <input 
+                                type="text" 
+                                id="cvv" 
+                                name="cvv" 
+                                placeholder="123"
+                                maxlength="4"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fecha_vencimiento">Fecha de Vencimiento</label>
+                            <input 
+                                type="month" 
+                                id="fecha_vencimiento" 
+                                name="fecha_vencimiento" 
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="entidad_bancaria">Entidad Bancaria</label>
+                        <select id="entidad_bancaria" name="entidad_bancaria" required>
+                            <option value="">Seleccione una entidad...</option>
+                            {% for entidad in entidades_bancarias %}
+                            <option value="{{ entidad }}">{{ entidad }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tipo_tarjeta">Tipo de Tarjeta</label>
+                        <select id="tipo_tarjeta" name="tipo_tarjeta" required>
+                            <option value="">Seleccione un tipo...</option>
+                            <option value="Débito">Débito</option>
+                            <option value="Crédito">Crédito</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="submit-button" id="submitBtn">
+                        Registrar Tarjeta
+                    </button>
+                </form>
+            </div>
+
+            <div class="cards-list-card">
+                <h2>Tarjetas Registradas</h2>
+                <div class="cards-list" id="cardsList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💳</div>
+                        <p>No hay tarjetas registradas aún</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Formatear número de tarjeta mientras se escribe
+        const numeroTarjetaInput = document.getElementById('numero_tarjeta');
+        numeroTarjetaInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
+            let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+            e.target.value = formattedValue;
+        });
+
+        // Limitar CVV a solo números
+        const cvvInput = document.getElementById('cvv');
+        cvvInput.addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+
+        // Función para mostrar mensajes
+        function showMessage(text, type = 'success') {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type} show`;
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 5000);
+        }
+
+        // Cargar tarjetas al cargar la página
+        async function loadCards() {
+            try {
+                const response = await fetch('/api/cards');
+                const data = await response.json();
+                
+                const cardsList = document.getElementById('cardsList');
+                
+                if (data.success && data.cards.length > 0) {
+                    cardsList.innerHTML = data.cards.map(card => `
+                        <div class="card-item">
+                            <div class="card-header">
+                                <div class="card-number">${card.numero_tarjeta_mask || '**** **** **** ' + card.numero_tarjeta.slice(-4)}</div>
+                                <span class="card-type-badge ${card.tipo_tarjeta.toLowerCase() === 'débito' ? 'debito' : 'credito'}">
+                                    ${card.tipo_tarjeta}
+                                </span>
+                            </div>
+                            <div class="card-details">
+                                <div class="card-detail">
+                                    <span class="card-detail-label">Entidad Bancaria</span>
+                                    <span class="card-detail-value">${card.entidad_bancaria}</span>
+                                </div>
+                                <div class="card-detail">
+                                    <span class="card-detail-label">Vencimiento</span>
+                                    <span class="card-detail-value">${card.fecha_vencimiento}</span>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button class="delete-button" onclick="deleteCard('${card.id}')">
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    cardsList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">💳</div>
+                            <p>No hay tarjetas registradas aún</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error al cargar tarjetas:', error);
+                showMessage('Error al cargar las tarjetas', 'error');
+            }
+        }
+
+        // Manejar envío del formulario
+        document.getElementById('cardForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Registrando...';
+
+            const formData = {
+                numero_tarjeta: document.getElementById('numero_tarjeta').value.replace(/\s/g, ''),
+                cvv: document.getElementById('cvv').value,
+                fecha_vencimiento: document.getElementById('fecha_vencimiento').value,
+                entidad_bancaria: document.getElementById('entidad_bancaria').value,
+                tipo_tarjeta: document.getElementById('tipo_tarjeta').value
+            };
+
+            try {
+                const response = await fetch('/api/card', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('Tarjeta registrada correctamente', 'success');
+                    document.getElementById('cardForm').reset();
+                    loadCards();
+                } else {
+                    showMessage(data.message || 'Error al registrar la tarjeta', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error al registrar la tarjeta', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Registrar Tarjeta';
+            }
+        });
+
+        // Eliminar tarjeta
+        async function deleteCard(cardId) {
+            if (!confirm('¿Está seguro de que desea eliminar esta tarjeta?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/card/${cardId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('Tarjeta eliminada correctamente', 'success');
+                    loadCards();
+                } else {
+                    showMessage(data.message || 'Error al eliminar la tarjeta', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error al eliminar la tarjeta', 'error');
+            }
+        }
+
+        // Variables globales
+        let cameraStream = null;
+        let nfcReader = null;
+        
+        // Detectar soporte NFC real (Web NFC API solo funciona en Android Chrome/Edge)
+        // iOS/Safari no soporta Web NFC API aunque el dispositivo tenga NFC
+        function isNFCSupported() {
+            // Web NFC API solo está disponible en Android Chrome/Edge
+            const hasWebNFC = 'NDEFReader' in window;
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
+            const isEdge = /Edg/i.test(navigator.userAgent);
+            
+            // Solo soportado en Android con Chrome o Edge
+            return hasWebNFC && isAndroid && (isChrome || isEdge);
+        }
+        
+        const nfcAvailable = isNFCSupported();
+
+        // Mostrar información sobre NFC si el dispositivo lo tiene pero el navegador no lo soporta
+        function setupNFCInfo() {
+            const nfcButton = document.getElementById('nfcButton');
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            
+            if (nfcAvailable) {
+                // NFC disponible - mostrar botón
+                nfcButton.style.display = 'flex';
+                document.querySelector('.scan-options').style.gridTemplateColumns = '1fr 1fr';
+            } else if (isIOS) {
+                // iOS tiene NFC hardware pero Safari no soporta Web NFC API
+                // No mostrar botón NFC pero agregar nota informativa
+                const scanOptions = document.querySelector('.scan-options');
+                const infoNote = document.createElement('div');
+                infoNote.className = 'nfc-info-note';
+                infoNote.innerHTML = `
+                    <span class="info-icon">ℹ️</span>
+                    <span>En iOS, usa el escáner de cámara. Safari no soporta NFC desde web.</span>
+                `;
+                scanOptions.appendChild(infoNote);
+            }
+        }
+        
+        setupNFCInfo();
+
+        // Función para actualizar estado de escaneo
+        function updateScanStatus(message, type = 'scanning') {
+            const statusEl = document.getElementById('scanStatus');
+            statusEl.textContent = message;
+            statusEl.className = `scan-status ${type}`;
+            statusEl.style.display = 'block';
+            
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Función para rellenar formulario con datos escaneados
+        function fillFormFromScan(data) {
+            if (data.numero_tarjeta) {
+                const numeroInput = document.getElementById('numero_tarjeta');
+                let numero = data.numero_tarjeta.replace(/\D/g, '');
+                numeroInput.value = numero.match(/.{1,4}/g)?.join(' ') || numero;
+                numeroInput.dispatchEvent(new Event('input'));
+            }
+            
+            if (data.cvv) {
+                document.getElementById('cvv').value = data.cvv;
+            }
+            
+            if (data.fecha_vencimiento) {
+                // Convertir formato MM/YY a YYYY-MM
+                let fecha = data.fecha_vencimiento.replace(/\D/g, '');
+                if (fecha.length === 4) {
+                    const mes = fecha.substring(0, 2);
+                    const año = '20' + fecha.substring(2, 4);
+                    document.getElementById('fecha_vencimiento').value = `${año}-${mes}`;
+                }
+            }
+            
+            if (data.entidad_bancaria) {
+                const select = document.getElementById('entidad_bancaria');
+                // Intentar encontrar coincidencia parcial
+                for (let option of select.options) {
+                    if (option.value.toLowerCase().includes(data.entidad_bancaria.toLowerCase()) ||
+                        data.entidad_bancaria.toLowerCase().includes(option.value.toLowerCase())) {
+                        select.value = option.value;
+                        break;
+                    }
+                }
+            }
+            
+            if (data.tipo_tarjeta) {
+                document.getElementById('tipo_tarjeta').value = data.tipo_tarjeta;
+            }
+        }
+
+        // Función para escanear con NFC
+        async function startNFCScan() {
+            if (!nfcAvailable) {
+                // Si no está disponible, redirigir a cámara
+                showMessage('NFC no está disponible en tu navegador. Usando escáner de cámara...', 'error');
+                setTimeout(() => {
+                    startCameraScan();
+                }, 1500);
+                return;
+            }
+
+            const nfcButton = document.getElementById('nfcButton');
+            nfcButton.classList.add('active');
+            updateScanStatus('Aproxima la tarjeta a la parte trasera del teléfono y manténla cerca...', 'scanning');
+
+            try {
+                nfcReader = new NDEFReader();
+                
+                await nfcReader.scan();
+                
+                nfcReader.onreading = event => {
+                    updateScanStatus('Tarjeta detectada, leyendo datos...', 'scanning');
+                    
+                    try {
+                        const message = event.message;
+                        const records = message.records;
+                        
+                        let cardData = {
+                            numero_tarjeta: null,
+                            cvv: null,
+                            fecha_vencimiento: null,
+                            entidad_bancaria: null,
+                            tipo_tarjeta: null
+                        };
+
+                        // Intentar leer datos de los registros NFC
+                        records.forEach(record => {
+                            if (record.recordType === 'text') {
+                                const textDecoder = new TextDecoder();
+                                const text = textDecoder.decode(record.data);
+                                
+                                // Intentar extraer número de tarjeta (puede estar encriptado)
+                                const cardNumberMatch = text.match(/\b\d{13,19}\b/);
+                                if (cardNumberMatch) {
+                                    cardData.numero_tarjeta = cardNumberMatch[0];
+                                }
+                                
+                                // Intentar extraer fecha MM/YY
+                                const dateMatch = text.match(/\b(\d{2})\/(\d{2})\b/);
+                                if (dateMatch) {
+                                    cardData.fecha_vencimiento = `${dateMatch[1]}/${dateMatch[2]}`;
+                                }
+                            } else if (record.recordType === 'mime' && record.mediaType.includes('application/json')) {
+                                const textDecoder = new TextDecoder();
+                                const jsonData = JSON.parse(textDecoder.decode(record.data));
+                                Object.assign(cardData, jsonData);
+                            }
+                        });
+
+                        // Nota: Los datos de tarjetas bancarias suelen estar encriptados
+                        // Por seguridad, es posible que solo podamos leer información limitada
+                        
+                        fillFormFromScan(cardData);
+                        updateScanStatus('Datos de tarjeta leídos. Por favor completa los campos faltantes manualmente.', 'success');
+                        
+                        nfcButton.classList.remove('active');
+                        
+                    } catch (error) {
+                        console.error('Error procesando datos NFC:', error);
+                        updateScanStatus('Datos leídos, pero algunos campos necesitan completarse manualmente.', 'success');
+                        nfcButton.classList.remove('active');
+                    }
+                };
+                
+                nfcReader.onreadingerror = error => {
+                    console.error('Error leyendo NFC:', error);
+                    updateScanStatus('Error al leer la tarjeta. Intenta nuevamente o usa la opción de cámara.', 'error');
+                    nfcButton.classList.remove('active');
+                };
+                
+            } catch (error) {
+                console.error('Error iniciando NFC:', error);
+                updateScanStatus('Error al iniciar NFC. Usando escáner de cámara...', 'error');
+                nfcButton.classList.remove('active');
+                // Automáticamente abrir cámara como alternativa
+                setTimeout(() => {
+                    startCameraScan();
+                }, 1000);
+            }
+        }
+
+        // Función para escanear con cámara
+        async function startCameraScan() {
+            const cameraButton = document.getElementById('cameraButton');
+            cameraButton.classList.add('active');
+            
+            document.getElementById('cameraModal').style.display = 'flex';
+            
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+                
+                const video = document.getElementById('cameraPreview');
+                video.srcObject = cameraStream;
+                video.play();
+                
+            } catch (error) {
+                console.error('Error accediendo a la cámara:', error);
+                closeCameraModal();
+                showMessage('Error al acceder a la cámara. Permite el acceso a la cámara.', 'error');
+                cameraButton.classList.remove('active');
+            }
+        }
+
+        // Función para capturar foto de la tarjeta
+        async function captureCard() {
+            const video = document.getElementById('cameraPreview');
+            const canvas = document.getElementById('cameraCanvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+            
+            closeCameraModal();
+            updateScanStatus('Procesando imagen de la tarjeta...', 'scanning');
+            
+            try {
+                // Usar Tesseract.js para OCR con configuración optimizada
+                const { data: { text } } = await Tesseract.recognize(
+                    canvas.toDataURL('image/jpeg', 0.9),
+                    'eng',
+                    {
+                        logger: m => {
+                            if (m.status === 'recognizing text') {
+                                updateScanStatus(`Analizando imagen... ${Math.round(m.progress * 100)}%`, 'scanning');
+                            }
+                        },
+                        // Configuración optimizada para números
+                        tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ /-',
+                        tessedit_pageseg_mode: '6' // Uniform block of text
+                    }
+                );
+                
+                // Extraer datos de la tarjeta usando expresiones regulares
+                const cardData = extractCardDataFromText(text);
+                
+                fillFormFromScan(cardData);
+                updateScanStatus('Datos extraídos de la tarjeta. Verifica y completa los campos faltantes.', 'success');
+                
+            } catch (error) {
+                console.error('Error procesando imagen:', error);
+                updateScanStatus('Error al procesar la imagen. Intenta nuevamente o completa los datos manualmente.', 'error');
+            }
+        }
+
+        // Función para extraer datos de tarjeta del texto OCR
+        function extractCardDataFromText(text) {
+            console.log('Texto extraído:', text);
+            
+            const cardData = {
+                numero_tarjeta: null,
+                cvv: null,
+                fecha_vencimiento: null,
+                entidad_bancaria: null,
+                tipo_tarjeta: null
+            };
+            
+            // Limpiar texto: eliminar espacios y caracteres especiales para búsqueda de números
+            const cleanText = text.replace(/\s+/g, ' ');
+            
+            // Extraer número de tarjeta (13-19 dígitos consecutivos o con espacios)
+            // Buscar patrones comunes: XXXX XXXX XXXX XXXX o XXXXXXXXXXXXXXXX
+            const cardNumberPatterns = [
+                /\b\d{4}\s+\d{4}\s+\d{4}\s+\d{4}\b/,  // Formato con espacios
+                /\b\d{4}\s+\d{4}\s+\d{4}\s+\d{3}\b/,  // 15 dígitos
+                /\b\d{13,19}\b/,                       // Sin espacios
+                /\b\d{4}\s+\d{4}\s+\d{4}\s+\d{1,4}\b/ // Variaciones
+            ];
+            
+            for (let pattern of cardNumberPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    cardData.numero_tarjeta = match[0].replace(/\s/g, '');
+                    // Validar que tenga entre 13 y 19 dígitos
+                    if (cardData.numero_tarjeta.length >= 13 && cardData.numero_tarjeta.length <= 19) {
+                        break;
+                    } else {
+                        cardData.numero_tarjeta = null;
+                    }
+                }
+            }
+            
+            // Extraer fecha de vencimiento - múltiples formatos
+            const datePatterns = [
+                /\b(\d{1,2})\s*[\/\-]\s*(\d{2,4})\b/,           // MM/YY o MM/YYYY
+                /\b(\d{2})\s*[\/\-]\s*(\d{2})\b/,               // MM/YY
+                /\bVALID\s+THRU\s*(\d{2})\s*[\/\-]\s*(\d{2,4})\b/i,  // "VALID THRU MM/YY"
+                /\bEXP\s*(\d{2})\s*[\/\-]\s*(\d{2,4})\b/i,     // "EXP MM/YY"
+                /\b(\d{2})\s*[\/\-]\s*(\d{2})\b/                // MM-YY
+            ];
+            
+            for (let pattern of datePatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    let mes = match[1].padStart(2, '0');
+                    let año = match[2];
+                    if (año.length === 2) {
+                        año = '20' + año;
+                    }
+                    // Validar mes (1-12)
+                    if (parseInt(mes) >= 1 && parseInt(mes) <= 12) {
+                        cardData.fecha_vencimiento = `${mes}/${año.substring(2)}`;
+                        break;
+                    }
+                }
+            }
+            
+            // Extraer CVV - buscar números de 3-4 dígitos cerca de palabras clave
+            const cvvPatterns = [
+                /\bCVV\s*[:]?\s*(\d{3,4})\b/i,
+                /\bCVC\s*[:]?\s*(\d{3,4})\b/i,
+                /\bCID\s*[:]?\s*(\d{3,4})\b/i,
+                /\b(\d{3,4})\s*(?:CVV|CVC|CID)/i
+            ];
+            
+            for (let pattern of cvvPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    cardData.cvv = match[1];
+                    break;
+                }
+            }
+            
+            // Si no se encontró CVV con palabras clave, buscar números pequeños al final
+            if (!cardData.cvv) {
+                const allNumbers = text.match(/\b\d{3,4}\b/g);
+                if (allNumbers && allNumbers.length > 0) {
+                    // El CVV suele ser uno de los últimos números pequeños
+                    // Filtrar números que no son fechas ni parte del número de tarjeta
+                    const potentialCVV = allNumbers.filter(num => {
+                        return num.length >= 3 && num.length <= 4 && 
+                               !text.includes(num + '/') && 
+                               !text.includes('/' + num);
+                    });
+                    if (potentialCVV.length > 0) {
+                        cardData.cvv = potentialCVV[potentialCVV.length - 1];
+                    }
+                }
+            }
+            
+            // Intentar detectar entidad bancaria con patrones mejorados
+            const bancos = [
+                { pattern: /banco\s+central/i, name: 'Banco Central del Paraguay' },
+                { pattern: /banco\s+nacional/i, name: 'Banco Nacional de Fomento' },
+                { pattern: /banco\s+ita[uú]/i, name: 'Banco Itaú Paraguay' },
+                { pattern: /banco\s+regional/i, name: 'Banco Regional' },
+                { pattern: /banco\s+familiar/i, name: 'Banco Familiar' },
+                { pattern: /banco\s+gnb/i, name: 'Banco GNB Paraguay' },
+                { pattern: /vision\s+banco/i, name: 'Vision Banco' },
+                { pattern: /banco\s+atlas/i, name: 'Banco Atlas' },
+                { pattern: /banco\s+continental/i, name: 'Banco Continental' },
+                { pattern: /banco\s+amambay/i, name: 'Banco Amambay' },
+                { pattern: /visa/i, name: 'Banco Central del Paraguay' },
+                { pattern: /mastercard/i, name: 'Banco Nacional de Fomento' }
+            ];
+            
+            const textLower = text.toLowerCase();
+            for (let banco of bancos) {
+                if (banco.pattern.test(textLower)) {
+                    cardData.entidad_bancaria = banco.name;
+                    break;
+                }
+            }
+            
+            // Detectar tipo de tarjeta con múltiples patrones
+            const textLower = text.toLowerCase();
+            if (textLower.includes('debito') || textLower.includes('débito') || 
+                textLower.includes('debit') || textLower.includes('ahorro')) {
+                cardData.tipo_tarjeta = 'Débito';
+            } else if (textLower.includes('credito') || textLower.includes('crédito') || 
+                       textLower.includes('credit') || textLower.includes('premium') ||
+                       textLower.includes('platinum') || textLower.includes('gold')) {
+                cardData.tipo_tarjeta = 'Crédito';
+            }
+            
+            // Si no se detectó tipo, intentar inferir del número de tarjeta
+            if (!cardData.tipo_tarjeta && cardData.numero_tarjeta) {
+                // Visa empieza con 4, Mastercard con 5, suelen ser crédito
+                if (cardData.numero_tarjeta.startsWith('4') || 
+                    cardData.numero_tarjeta.startsWith('5')) {
+                    cardData.tipo_tarjeta = 'Crédito';
+                }
+            }
+            
+            console.log('Datos extraídos:', cardData);
+            return cardData;
+        }
+
+        // Función para cerrar modal de cámara
+        function closeCameraModal() {
+            document.getElementById('cameraModal').style.display = 'none';
+            
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            
+            const video = document.getElementById('cameraPreview');
+            video.srcObject = null;
+            
+            const cameraButton = document.getElementById('cameraButton');
+            cameraButton.classList.remove('active');
+        }
+
+        // Limpiar recursos al salir
+        window.addEventListener('beforeunload', () => {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+            if (nfcReader) {
+                nfcReader.onreading = null;
+                nfcReader.onreadingerror = null;
+            }
+        });
+
+        // Cargar tarjetas al inicio
+        loadCards();
+    </script>
+</body>
+</html>

@@ -19,6 +19,7 @@ app = Flask(__name__)
 # Ruta del archivo CSV
 CSV_FILE = 'products.csv'
 USERS_FILE = 'users.csv'
+CARDS_FILE = 'cards.csv'
 
 # Porcentaje de reintegro en compras (10%)
 REINTEGRO_PORCENTAJE = 10
@@ -51,6 +52,21 @@ PROVEEDORES = {
     "77": "Comercial Paraguay",
 }
 
+# Entidades bancarias disponibles
+ENTIDADES_BANCARIAS = [
+    "Banco Central del Paraguay",
+    "Banco Nacional de Fomento",
+    "Banco Itaú Paraguay",
+    "Banco Regional",
+    "Banco Familiar",
+    "Banco GNB Paraguay",
+    "Vision Banco",
+    "Banco Atlas",
+    "Banco Continental",
+    "Banco Amambay",
+    "Otra entidad bancaria"
+]
+
 
 def init_users_file():
     """Inicializa el archivo de usuarios con el usuario por defecto"""
@@ -63,6 +79,49 @@ def init_users_file():
                 'nombre': 'Caleb Medina',
                 'puntos': '1000'
             })
+
+
+def init_cards_file():
+    """Inicializa el archivo de tarjetas si no existe"""
+    if not os.path.exists(CARDS_FILE):
+        with open(CARDS_FILE, 'w', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=['id', 'numero_tarjeta', 'cvv', 'fecha_vencimiento', 'entidad_bancaria', 'tipo_tarjeta'])
+            writer.writeheader()
+
+
+def read_cards():
+    """Lee todas las tarjetas del CSV"""
+    cards = []
+    if os.path.exists(CARDS_FILE):
+        with open(CARDS_FILE, 'r', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                cards.append(row)
+    return cards
+
+
+def write_cards(cards):
+    """Escribe las tarjetas al CSV"""
+    if cards:
+        fieldnames = ['id', 'numero_tarjeta', 'cvv', 'fecha_vencimiento', 'entidad_bancaria', 'tipo_tarjeta']
+        with open(CARDS_FILE, 'w', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(cards)
+    else:
+        # Si no hay tarjetas, solo escribir el encabezado
+        with open(CARDS_FILE, 'w', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=['id', 'numero_tarjeta', 'cvv', 'fecha_vencimiento', 'entidad_bancaria', 'tipo_tarjeta'])
+            writer.writeheader()
+
+
+def find_card_by_id(card_id):
+    """Busca una tarjeta por su ID"""
+    cards = read_cards()
+    for card in cards:
+        if card['id'] == card_id:
+            return card
+    return None
 
 
 def read_users():
@@ -210,6 +269,12 @@ def dashboard():
                          total_users=len(users),
                          users_with_facial=users_with_facial,
                          total_points=total_points)
+
+
+@app.route('/cards')
+def cards():
+    """Página de registro de tarjetas"""
+    return render_template('cards.html', entidades_bancarias=ENTIDADES_BANCARIAS)
 
 
 @app.route('/api/product/<code>')
@@ -692,12 +757,206 @@ def get_all_users():
     })
 
 
+# ==================== APIs de Tarjetas ====================
+
+@app.route('/api/cards')
+def get_all_cards():
+    """API para obtener todas las tarjetas"""
+    cards = read_cards()
+    # Enmascarar números de tarjeta para seguridad (mostrar solo últimos 4 dígitos)
+    for card in cards:
+        if len(card['numero_tarjeta']) > 4:
+            card['numero_tarjeta_mask'] = '**** **** **** ' + card['numero_tarjeta'][-4:]
+        else:
+            card['numero_tarjeta_mask'] = '****'
+    return jsonify({
+        'success': True,
+        'cards': cards
+    })
+
+
+@app.route('/api/card', methods=['POST'])
+def add_card():
+    """API para agregar una nueva tarjeta"""
+    data = request.json
+    
+    # Validar datos requeridos
+    required = ['numero_tarjeta', 'cvv', 'fecha_vencimiento', 'entidad_bancaria', 'tipo_tarjeta']
+    for field in required:
+        if field not in data or not data[field]:
+            return jsonify({
+                'success': False,
+                'message': f'Campo requerido: {field}'
+            })
+    
+    # Validar formato de número de tarjeta (debe tener 13-19 dígitos)
+    numero_tarjeta = ''.join(filter(str.isdigit, data['numero_tarjeta']))
+    if len(numero_tarjeta) < 13 or len(numero_tarjeta) > 19:
+        return jsonify({
+            'success': False,
+            'message': 'El número de tarjeta debe tener entre 13 y 19 dígitos'
+        })
+    
+    # Validar CVV (debe tener 3 o 4 dígitos)
+    cvv = ''.join(filter(str.isdigit, str(data['cvv'])))
+    if len(cvv) < 3 or len(cvv) > 4:
+        return jsonify({
+            'success': False,
+            'message': 'El CVV debe tener 3 o 4 dígitos'
+        })
+    
+    # Validar tipo de tarjeta
+    if data['tipo_tarjeta'] not in ['Débito', 'Crédito']:
+        return jsonify({
+            'success': False,
+            'message': 'El tipo de tarjeta debe ser Débito o Crédito'
+        })
+    
+    # Leer tarjetas existentes
+    cards = read_cards()
+    
+    # Generar nuevo ID
+    if cards:
+        max_id = max(int(c['id']) for c in cards)
+        new_id = str(max_id + 1)
+    else:
+        new_id = '1'
+    
+    # Verificar si el número de tarjeta ya existe
+    if any(c['numero_tarjeta'] == numero_tarjeta for c in cards):
+        return jsonify({
+            'success': False,
+            'message': 'Ya existe una tarjeta con este número'
+        })
+    
+    # Crear nueva tarjeta
+    new_card = {
+        'id': new_id,
+        'numero_tarjeta': numero_tarjeta,
+        'cvv': cvv,
+        'fecha_vencimiento': data['fecha_vencimiento'],
+        'entidad_bancaria': data['entidad_bancaria'],
+        'tipo_tarjeta': data['tipo_tarjeta']
+    }
+    
+    cards.append(new_card)
+    write_cards(cards)
+    
+    return jsonify({
+        'success': True,
+        'message': 'Tarjeta registrada correctamente',
+        'card': new_card
+    })
+
+
+@app.route('/api/card/<card_id>', methods=['PUT'])
+def update_card(card_id):
+    """API para actualizar una tarjeta"""
+    data = request.json
+    cards = read_cards()
+    
+    card_found = False
+    for i, card in enumerate(cards):
+        if card['id'] == card_id:
+            # Validar y actualizar campos permitidos
+            if 'numero_tarjeta' in data:
+                numero_tarjeta = ''.join(filter(str.isdigit, data['numero_tarjeta']))
+                if len(numero_tarjeta) < 13 or len(numero_tarjeta) > 19:
+                    return jsonify({
+                        'success': False,
+                        'message': 'El número de tarjeta debe tener entre 13 y 19 dígitos'
+                    })
+                # Verificar que no esté duplicado
+                if any(c['numero_tarjeta'] == numero_tarjeta and c['id'] != card_id for c in cards):
+                    return jsonify({
+                        'success': False,
+                        'message': 'Ya existe otra tarjeta con este número'
+                    })
+                cards[i]['numero_tarjeta'] = numero_tarjeta
+            
+            if 'cvv' in data:
+                cvv = ''.join(filter(str.isdigit, str(data['cvv'])))
+                if len(cvv) < 3 or len(cvv) > 4:
+                    return jsonify({
+                        'success': False,
+                        'message': 'El CVV debe tener 3 o 4 dígitos'
+                    })
+                cards[i]['cvv'] = cvv
+            
+            if 'fecha_vencimiento' in data:
+                cards[i]['fecha_vencimiento'] = data['fecha_vencimiento']
+            
+            if 'entidad_bancaria' in data:
+                cards[i]['entidad_bancaria'] = data['entidad_bancaria']
+            
+            if 'tipo_tarjeta' in data:
+                if data['tipo_tarjeta'] not in ['Débito', 'Crédito']:
+                    return jsonify({
+                        'success': False,
+                        'message': 'El tipo de tarjeta debe ser Débito o Crédito'
+                    })
+                cards[i]['tipo_tarjeta'] = data['tipo_tarjeta']
+            
+            card_found = True
+            break
+    
+    if not card_found:
+        return jsonify({
+            'success': False,
+            'message': 'Tarjeta no encontrada'
+        })
+    
+    write_cards(cards)
+    
+    return jsonify({
+        'success': True,
+        'message': 'Tarjeta actualizada exitosamente',
+        'card': cards[i] if card_found else None
+    })
+
+
+@app.route('/api/card/<card_id>', methods=['DELETE'])
+def delete_card(card_id):
+    """API para eliminar una tarjeta"""
+    cards = read_cards()
+    new_cards = [c for c in cards if c['id'] != card_id]
+    
+    if len(new_cards) == len(cards):
+        return jsonify({
+            'success': False,
+            'message': 'Tarjeta no encontrada'
+        })
+    
+    write_cards(new_cards)
+    
+    return jsonify({
+        'success': True,
+        'message': 'Tarjeta eliminada exitosamente'
+    })
+
+
+@app.route('/api/card/<card_id>')
+def get_card(card_id):
+    """API para obtener una tarjeta por ID"""
+    card = find_card_by_id(card_id)
+    if card:
+        return jsonify({
+            'success': True,
+            'card': card
+        })
+    return jsonify({
+        'success': False,
+        'message': 'Tarjeta no encontrada'
+    })
+
+
 if __name__ == '__main__':
     import ssl
     import os
     
-    # Inicializar archivo de usuarios
+    # Inicializar archivos
     init_users_file()
+    init_cards_file()
     
     print("\n🚀 Servidor iniciado!")
     print("=" * 50)
