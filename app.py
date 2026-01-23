@@ -5,8 +5,9 @@ Servidor Flask con base de datos CSV
 """
 
 import csv
+import io
 import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
 from facial_recognition import (
     register_user_face,
     recognize_face,
@@ -242,6 +243,28 @@ def inventory():
     """Página de inventario"""
     products = read_products()
     return render_template('inventory.html', products=products)
+
+
+@app.route('/inventory/export')
+def inventory_export():
+    products = read_products()
+    fieldnames = ['codigo', 'nombre', 'categoria', 'precio', 'pais', 'proveedor', 'stock']
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for p in products:
+        writer.writerow({k: p.get(k, '') for k in fieldnames})
+
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    response.headers['Content-Disposition'] = 'attachment; filename=inventory_export.csv'
+    return response
+
+
+@app.route('/inventory/print')
+def inventory_print():
+    products = read_products()
+    return render_template('inventory_print.html', products=products)
 
 
 @app.route('/facial-recognition')

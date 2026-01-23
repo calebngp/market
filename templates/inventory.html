@@ -154,6 +154,11 @@
             flex-wrap: wrap;
         }
 
+        .toolbar-actions {
+            display: flex;
+            gap: 12px;
+        }
+
         .search-box {
             flex: 1;
             min-width: 250px;
@@ -200,6 +205,24 @@
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b8b9e' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 15px center;
+        }
+
+        .btn-toolbar {
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .btn-toolbar:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
         }
 
         /* Table */
@@ -639,6 +662,10 @@
                 <option value="medium">Stock medio (10-50)</option>
                 <option value="low">Stock bajo (<10)</option>
             </select>
+            <div class="toolbar-actions">
+                <button class="btn-toolbar" type="button" onclick="window.location.href='/inventory/export'">📤 Exportar CSV</button>
+                <button class="btn-toolbar" type="button" onclick="window.open('/inventory/print', '_blank')">🖨️ Imprimir códigos</button>
+            </div>
         </div>
 
         <!-- Table -->

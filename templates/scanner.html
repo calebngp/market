@@ -99,14 +99,20 @@
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 40px 20px;
+            padding: 20px 12px;
         }
 
         .scanner-layout {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 40px;
             align-items: start;
+        }
+
+        @media (max-width: 1280px) {
+            .scanner-layout {
+                grid-template-columns: 1fr 1fr;
+            }
         }
 
         @media (max-width: 1024px) {
@@ -139,11 +145,17 @@
             padding: 30px;
         }
 
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
         /* Scanner styles */
         #scanner-container {
             position: relative;
             width: 100%;
-            min-height: 350px;
             background: #000;
             border-radius: 16px;
             overflow: hidden;
@@ -151,10 +163,16 @@
 
         #reader {
             width: 100%;
+            position: relative;
         }
 
         #reader video {
             border-radius: 16px;
+            width: 100% !important;
+            height: auto !important;
+            display: block !important;
+            object-fit: cover;
+            transform: scaleX(-1);
         }
 
         /* Customize html5-qrcode scanner */
@@ -164,6 +182,11 @@
 
         #reader__scan_region video {
             border-radius: 12px !important;
+            width: 100% !important;
+            height: auto !important;
+            display: block !important;
+            object-fit: cover;
+            transform: scaleX(-1) !important;
         }
 
         #reader__dashboard {
@@ -892,20 +915,20 @@
 
         .btn-purchase {
             width: 100%;
-            padding: 18px 24px;
+            padding: 12px 16px;
             background: linear-gradient(135deg, var(--success), #00cc6a);
             border: none;
-            border-radius: 16px;
+            border-radius: 12px;
             color: var(--bg-primary);
             font-family: 'Outfit', sans-serif;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
             box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3);
         }
 
@@ -922,17 +945,71 @@
         }
 
         .purchase-icon {
-            font-size: 2rem;
+            font-size: 1.4rem;
         }
 
         .purchase-text {
-            font-size: 1.2rem;
+            font-size: 1rem;
         }
 
         .purchase-reintegro {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             opacity: 0.9;
             font-weight: 500;
+        }
+
+        .qty-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qty-value {
+            min-width: 40px;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .delete-item-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 71, 87, 0.12);
+            color: var(--error);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .numeric-keypad {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .keypad-btn {
+            height: 54px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .keypad-btn-secondary {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary);
         }
     </style>
 </head>
@@ -945,52 +1022,37 @@
             <span>📦</span>
             <span>Market</span>
         </a>
-        <span class="nav-title">📷 Escáner de Códigos</span>
+        <span class="nav-title" id="greeting"></span>
     </nav>
 
     <div class="container">
         <div class="scanner-layout">
             <!-- Scanner Panel -->
             <div class="panel">
-                <div class="panel-header">
-                    <span>🎥</span>
-                    <h2>Cámara</h2>
-                </div>
                 <div class="panel-body">
-                    <div id="scan-status" class="scan-status stopped">
-                        <span>⏹️</span> Cámara detenida
-                    </div>
-
                     <div id="scanner-container">
                         <div id="reader"></div>
                     </div>
-
-                    <div id="last-scan" class="last-scan">
-                        <span>✅</span> Último código: <span class="code" id="last-code" onclick="previewLastBarcode()">-</span>
-                    </div>
-
-                    <!-- User Points Display -->
-                    <div class="user-points-display">
-                        <div class="user-info">
-                            <span class="user-name" id="user-name">Cargando...</span>
-                            <span class="user-points" id="user-points">-</span>
-                        </div>
-                    </div>
-                    
-                    <div class="scanner-controls">
-                        <button id="start-btn" class="btn btn-primary" onclick="startScanner()">
-                            <span>▶</span> Iniciar Cámara
-                        </button>
-                        <button id="stop-btn" class="btn btn-secondary" onclick="stopScanner()" disabled>
-                            <span>⏹</span> Detener
-                        </button>
-                    </div>
-
+                     
                     <div class="manual-input">
                         <label>O ingresa el código manualmente:</label>
                         <div class="input-group">
-                            <input type="text" id="manual-code" placeholder="1345364" maxlength="13">
+                            <input type="text" id="manual-code" placeholder="1345364" maxlength="13" inputmode="numeric" autocomplete="off">
                             <button class="btn btn-primary" onclick="searchManual()">Buscar</button>
+                        </div>
+                        <div class="numeric-keypad" id="numeric-keypad">
+                            <button type="button" class="keypad-btn" onclick="appendManualDigit('1')">1</button>
+                            <button type="button" class="keypad-btn" onclick="appendManualDigit('2')">2</button>
+                            <button type="button" class="keypad-btn" onclick="appendManualDigit('3')">3</button>
+                            <button type="button" class="keypad-btn" onclick="appendManualDigit('4')">4</button>
+                            <button type="button" class="keypad-btn" onclick="appendManualDigit('5')">5</button>
+                            <button type="button" class="keypad-btn" onclick="appendManualDigit('6')">6</button>
+                            <button type="button" class="keypad-btn" onclick="appendManualDigit('7')">7</button>
+                            <button type="button" class="keypad-btn" onclick="appendManualDigit('8')">8</button>
+                            <button type="button" class="keypad-btn" onclick="appendManualDigit('9')">9</button>
+                            <button type="button" class="keypad-btn keypad-btn-secondary" onclick="clearManualCode()">C</button>
+                            <button type="button" class="keypad-btn" onclick="appendManualDigit('0')">0</button>
+                            <button type="button" class="keypad-btn keypad-btn-secondary" onclick="backspaceManualCode()">⌫</button>
                         </div>
                     </div>
                 </div>
@@ -998,10 +1060,6 @@
 
             <!-- Result Panel -->
             <div class="panel">
-                <div class="panel-header">
-                    <span>📋</span>
-                    <h2>Resultado</h2>
-                </div>
                 <div class="panel-body">
                     <div id="no-result" class="no-result">
                         <div class="icon">📦</div>
@@ -1014,39 +1072,15 @@
                     </div>
 
                     <div id="result-container" class="result-container">
-                        <div class="barcode-display">
-                            <div class="code" id="result-code" style="cursor: pointer;" onclick="previewResultBarcode()">-</div>
-                        </div>
-
                         <div class="product-card">
                             <div class="product-name" id="result-name">-</div>
                             <div class="product-category" id="result-category">-</div>
                             <div class="product-price">
                                 ₲ <span id="result-price">0</span>
-                                <small>PYG</small>
                             </div>
                             <div class="product-points">
                                 <span class="points-icon">⭐</span>
                                 <span id="result-points">0</span> puntos
-                            </div>
-                        </div>
-
-                        <div class="product-details">
-                            <div class="detail-item">
-                                <div class="label">País de Origen</div>
-                                <div class="value" id="result-country">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="label">Proveedor</div>
-                                <div class="value" id="result-supplier">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="label">Stock</div>
-                                <div class="value" id="result-stock">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="label">Estado</div>
-                                <div class="value" id="result-status">-</div>
                             </div>
                         </div>
 
@@ -1058,40 +1092,27 @@
                                 <span class="purchase-reintegro">+<span id="reintegro-amount">0</span> pts de reintegro</span>
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
 
-                        <div class="decoded-info">
-                            <h4>Información Decodificada del Código</h4>
-                            <div class="decoded-grid">
-                                <div class="decoded-item">
-                                    <div class="code" id="decoded-country">--</div>
-                                    <div class="name">País</div>
-                                </div>
-                                <div class="decoded-item">
-                                    <div class="code" id="decoded-product">---</div>
-                                    <div class="name">Producto</div>
-                                </div>
-                                <div class="decoded-item">
-                                    <div class="code" id="decoded-supplier">--</div>
-                                    <div class="name">Proveedor</div>
-                                </div>
-                            </div>
+            <!-- Cart Panel -->
+            <div class="panel">
+                <div class="panel-body">
+                    <div class="panel-title">Carrito</div>
+                    <div class="scanned-products-history" id="history-section" style="display: none;">
+                    <div class="history-header">
+                        <h3>📋 Productos Escaneados</h3>
+                        <div class="history-actions">
+                            <label class="select-all" onclick="event.stopPropagation()">
+                                <input type="checkbox" id="select-all-history" onchange="toggleSelectAllHistory(event)">
+                                Seleccionar todo
+                            </label>
+                            <button class="clear-history-btn" onclick="clearHistory()">Limpiar</button>
                         </div>
-
-                        <!-- Scanned Products History -->
-                        <div class="scanned-products-history" id="history-section" style="display: none;">
-                        <div class="history-header">
-                            <h3>📋 Productos Escaneados</h3>
-                            <div class="history-actions">
-                                <label class="select-all" onclick="event.stopPropagation()">
-                                    <input type="checkbox" id="select-all-history" onchange="toggleSelectAllHistory(event)">
-                                    Seleccionar todo
-                                </label>
-                                <button class="clear-history-btn" onclick="clearHistory()">Limpiar</button>
-                            </div>
-                        </div>
-                            <div class="history-list" id="history-list">
-                                <!-- History items will be added here -->
-                            </div>
+                    </div>
+                        <div class="history-list" id="history-list">
+                            <!-- History items will be added here -->
                         </div>
                     </div>
                 </div>
@@ -1173,17 +1194,25 @@
         let lastScanTime = 0;
         let currentUser = null;
         let currentProduct = null;
+        let currentProductData = null;
         let scannedProductsHistory = [];
         let activeHistoryIndex = -1;
         let selectedHistoryCodes = new Set();
         let facialStream = null;
         let facialCameraInitialized = false;
 
+        const userCartStates = new Map();
+        let currentUserKey = 'guest';
+        let faceRecognitionIntervalId = null;
+        let faceRecognitionInFlight = false;
+        let lastFaceSeenAt = 0;
+
         function updateStatus(scanning) {
             const status = document.getElementById('scan-status');
+            if (!status) return;
             if (scanning) {
                 status.className = 'scan-status scanning';
-                status.innerHTML = '<div class="pulse-dot"></div> Escaneando...';
+                status.innerHTML = '<div class="pulse-dot"></div>';
             } else {
                 status.className = 'scan-status stopped';
                 status.innerHTML = '<span>⏹️</span> Cámara detenida';
@@ -1220,9 +1249,11 @@
                 );
 
                 isScanning = true;
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
+                if (startBtn) startBtn.disabled = true;
+                if (stopBtn) stopBtn.disabled = false;
                 updateStatus(true);
+
+                startFaceRecognitionLoop();
 
             } catch (err) {
                 console.error("Error al iniciar cámara:", err);
@@ -1235,9 +1266,12 @@
                 try {
                     await html5QrCode.stop();
                     isScanning = false;
-                    document.getElementById('start-btn').disabled = false;
-                    document.getElementById('stop-btn').disabled = true;
+                    const startBtn = document.getElementById('start-btn');
+                    const stopBtn = document.getElementById('stop-btn');
+                    if (startBtn) startBtn.disabled = false;
+                    if (stopBtn) stopBtn.disabled = true;
                     updateStatus(false);
+                    stopFaceRecognitionLoop();
                     return true;
                 } catch (err) {
                     console.error("Error al detener el escáner:", err);
@@ -1245,6 +1279,139 @@
                 }
             }
             return true; // Si no hay escáner activo, retornamos true
+        }
+
+        function setGreeting(user) {
+            const el = document.getElementById('greeting');
+            if (!el) return;
+            if (user && user.nombre) {
+                el.textContent = `Hola ${user.nombre}`;
+            } else {
+                el.textContent = 'Hola';
+            }
+        }
+
+        function saveCurrentCartState() {
+            const key = currentUserKey || 'guest';
+            userCartStates.set(key, {
+                scannedProductsHistory: Array.isArray(scannedProductsHistory) ? [...scannedProductsHistory] : [],
+                activeHistoryIndex: typeof activeHistoryIndex === 'number' ? activeHistoryIndex : -1,
+                selectedHistoryCodes: new Set(Array.from(selectedHistoryCodes || [])),
+                currentProduct: currentProduct ? { ...currentProduct } : null,
+                currentProductData: currentProductData ? { ...currentProductData } : null
+            });
+        }
+
+        function loadCartStateForKey(key) {
+            const state = userCartStates.get(key);
+            scannedProductsHistory = state && state.scannedProductsHistory ? [...state.scannedProductsHistory] : [];
+            activeHistoryIndex = state && typeof state.activeHistoryIndex === 'number' ? state.activeHistoryIndex : -1;
+            selectedHistoryCodes = state && state.selectedHistoryCodes ? new Set(Array.from(state.selectedHistoryCodes)) : new Set();
+            currentProduct = state ? state.currentProduct : null;
+            currentProductData = state ? state.currentProductData : null;
+
+            updateHistoryDisplay();
+            updatePurchaseSection();
+
+            if (currentProduct) {
+                displayProduct(currentProduct, currentProduct.decoded);
+            } else {
+                const resultContainer = document.getElementById('result-container');
+                if (resultContainer) resultContainer.classList.remove('active');
+                const errorMessage = document.getElementById('error-message');
+                if (errorMessage) errorMessage.classList.remove('active');
+                const noResult = document.getElementById('no-result');
+                if (noResult) noResult.style.display = 'block';
+            }
+        }
+
+        function switchActiveUser(user) {
+            const nextKey = user && user.id ? String(user.id) : 'guest';
+            if (nextKey === currentUserKey) {
+                if (user && (!currentUser || String(currentUser.id) !== String(user.id))) {
+                    currentUser = user;
+                    updatePurchaseSection();
+                }
+                setGreeting(currentUser);
+                return;
+            }
+
+            saveCurrentCartState();
+
+            currentUser = user;
+            currentUserKey = nextKey;
+            setGreeting(currentUser);
+
+            loadCartStateForKey(currentUserKey);
+        }
+
+        function getScannerVideoEl() {
+            return document.querySelector('#reader video');
+        }
+
+        function captureFrameFromScannerVideo() {
+            const video = getScannerVideoEl();
+            if (!video || !video.videoWidth || !video.videoHeight) return null;
+
+            const canvas = document.createElement('canvas');
+            const targetWidth = 320;
+            const scale = targetWidth / video.videoWidth;
+            canvas.width = targetWidth;
+            canvas.height = Math.round(video.videoHeight * scale);
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return null;
+
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.7);
+        }
+
+        async function recognizePersonFromScannerVideo() {
+            if (!isScanning) return;
+            if (faceRecognitionInFlight) return;
+
+            const frame = captureFrameFromScannerVideo();
+            if (!frame) return;
+
+            faceRecognitionInFlight = true;
+            try {
+                const resp = await fetch('/api/facial/recognize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: frame, tolerance: 0.6 })
+                });
+                const data = await resp.json();
+
+                if (data && data.success && data.user) {
+                    lastFaceSeenAt = Date.now();
+                    switchActiveUser(data.user);
+                }
+            } catch (e) {
+                console.error('Error en reconocimiento facial en vivo:', e);
+            } finally {
+                faceRecognitionInFlight = false;
+            }
+        }
+
+        function startFaceRecognitionLoop() {
+            if (faceRecognitionIntervalId) return;
+
+            faceRecognitionIntervalId = setInterval(() => {
+                recognizePersonFromScannerVideo();
+
+                const now = Date.now();
+                if (currentUser && lastFaceSeenAt && (now - lastFaceSeenAt) > 6000) {
+                    switchActiveUser(null);
+                }
+            }, 1500);
+        }
+
+        function stopFaceRecognitionLoop() {
+            if (faceRecognitionIntervalId) {
+                clearInterval(faceRecognitionIntervalId);
+                faceRecognitionIntervalId = null;
+            }
+            faceRecognitionInFlight = false;
         }
 
         function onScanSuccess(decodedText, decodedResult) {
@@ -1258,8 +1425,10 @@
             lastScanTime = now;
 
             // Mostrar último código escaneado
-            document.getElementById('last-code').textContent = decodedText;
-            document.getElementById('last-scan').classList.add('active');
+            const lastCodeEl = document.getElementById('last-code');
+            if (lastCodeEl) lastCodeEl.textContent = decodedText;
+            const lastScanEl = document.getElementById('last-scan');
+            if (lastScanEl) lastScanEl.classList.add('active');
 
             // Limpiar campo de entrada manual
             document.getElementById('manual-code').value = '';
@@ -1275,6 +1444,28 @@
 
         function onScanError(errorMessage) {
             // Ignorar errores de escaneo (son normales cuando no hay código)
+        }
+
+        function appendManualDigit(digit) {
+            const input = document.getElementById('manual-code');
+            if (!input) return;
+            if (input.value.length >= (parseInt(input.getAttribute('maxlength')) || 13)) return;
+            input.value = (input.value || '') + digit;
+            input.focus();
+        }
+
+        function backspaceManualCode() {
+            const input = document.getElementById('manual-code');
+            if (!input) return;
+            input.value = (input.value || '').slice(0, -1);
+            input.focus();
+        }
+
+        function clearManualCode() {
+            const input = document.getElementById('manual-code');
+            if (!input) return;
+            input.value = '';
+            input.focus();
         }
 
         function searchManual() {
@@ -1296,11 +1487,6 @@
                 document.getElementById('no-result').style.display = 'none';
                 
                 if (data.success) {
-                    // Detener el escáner cuando se encuentra un producto
-                    if (isScanning) {
-                        await stopScanner();
-                    }
-
                     document.getElementById('error-message').classList.remove('active');
                     document.getElementById('result-container').classList.add('active');
                     
@@ -1317,6 +1503,7 @@
                         if (existingIndex === -1) {
                             scannedProductsHistory.unshift({
                                 ...product,
+                                qty: 1,
                                 decoded: decoded,
                                 scannedAt: new Date().toLocaleTimeString('es-PY')
                             });
@@ -1327,10 +1514,14 @@
                             activeHistoryIndex = 0;
                             updateHistoryDisplay();
                         } else {
-                            // Si ya existe, moverlo al principio
+                            // Si ya existe, incrementar cantidad y moverlo al principio
+                            const existing = scannedProductsHistory[existingIndex];
+                            const nextQty = (existing && typeof existing.qty === 'number' ? existing.qty : 1) + 1;
                             scannedProductsHistory.splice(existingIndex, 1);
                             scannedProductsHistory.unshift({
+                                ...existing,
                                 ...product,
+                                qty: nextQty,
                                 decoded: decoded,
                                 scannedAt: new Date().toLocaleTimeString('es-PY')
                             });
@@ -1362,32 +1553,44 @@
         }
 
         function displayProduct(product, decoded) {
-            document.getElementById('result-code').textContent = product.codigo;
+            const resultCodeEl = document.getElementById('result-code');
+            if (resultCodeEl) resultCodeEl.textContent = product.codigo;
             document.getElementById('result-name').textContent = product.nombre;
             document.getElementById('result-category').textContent = product.categoria;
             document.getElementById('result-price').textContent = formatNumber(product.precio);
             document.getElementById('result-points').textContent = (product.puntos || 0).toLocaleString('es-PY');
-            document.getElementById('result-country').textContent = product.pais;
-            document.getElementById('result-supplier').textContent = product.proveedor;
-            document.getElementById('result-stock').textContent = product.stock + ' unidades';
-            
-            const stock = parseInt(product.stock);
+
+            const countryEl = document.getElementById('result-country');
+            if (countryEl) countryEl.textContent = product.pais;
+
+            const supplierEl = document.getElementById('result-supplier');
+            if (supplierEl) supplierEl.textContent = product.proveedor;
+
+            const stockEl = document.getElementById('result-stock');
+            if (stockEl) stockEl.textContent = product.stock + ' unidades';
+
             const statusEl = document.getElementById('result-status');
-            if (stock > 50) {
-                statusEl.textContent = '✅ Disponible';
-                statusEl.style.color = '#00ff88';
-            } else if (stock > 0) {
-                statusEl.textContent = '⚠️ Stock bajo';
-                statusEl.style.color = '#ffaa00';
-            } else {
-                statusEl.textContent = '❌ Sin stock';
-                statusEl.style.color = '#ff4757';
+            if (statusEl) {
+                const stock = parseInt(product.stock);
+                if (stock > 50) {
+                    statusEl.textContent = '✅ Disponible';
+                    statusEl.style.color = '#00ff88';
+                } else if (stock > 0) {
+                    statusEl.textContent = '⚠️ Stock bajo';
+                    statusEl.style.color = '#ffaa00';
+                } else {
+                    statusEl.textContent = '❌ Sin stock';
+                    statusEl.style.color = '#ff4757';
+                }
             }
 
             if (decoded) {
-                document.getElementById('decoded-country').textContent = decoded.pais_codigo;
-                document.getElementById('decoded-product').textContent = decoded.producto_id;
-                document.getElementById('decoded-supplier').textContent = decoded.proveedor_codigo;
+                const decodedCountryEl = document.getElementById('decoded-country');
+                const decodedProductEl = document.getElementById('decoded-product');
+                const decodedSupplierEl = document.getElementById('decoded-supplier');
+                if (decodedCountryEl) decodedCountryEl.textContent = decoded.pais_codigo;
+                if (decodedProductEl) decodedProductEl.textContent = decoded.producto_id;
+                if (decodedSupplierEl) decodedSupplierEl.textContent = decoded.proveedor_codigo;
             }
         }
 
@@ -1409,6 +1612,7 @@
                 historyItem.onclick = () => viewHistoryProduct(index);
                 
                 const checked = selectedHistoryCodes.has(product.codigo);
+                const qty = product && typeof product.qty === 'number' ? product.qty : 1;
                 historyItem.innerHTML = `
                     <div class="history-item-checkbox" onclick="event.stopPropagation()">
                         <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleHistorySelection(event, '${product.codigo}')">
@@ -1421,6 +1625,10 @@
                         <div class="history-item-details">
                             <div class="history-item-price">₲ ${formatNumber(product.precio)}</div>
                             <div class="history-item-points">⭐ ${(product.puntos || 0).toLocaleString('es-PY')} pts</div>
+                            <div class="qty-controls" onclick="event.stopPropagation()">
+                                <span class="qty-value">x${qty}</span>
+                            </div>
+                            <button type="button" class="delete-item-btn" onclick="removeCartItem('${product.codigo}'); event.stopPropagation();">🗑</button>
                         </div>
                     </div>
                 `;
@@ -1499,6 +1707,25 @@
             }
         }
 
+        function removeCartItem(code) {
+            const idx = scannedProductsHistory.findIndex(p => p.codigo === code);
+            if (idx === -1) return;
+
+            scannedProductsHistory.splice(idx, 1);
+            selectedHistoryCodes.delete(code);
+
+            if (activeHistoryIndex === idx) {
+                activeHistoryIndex = -1;
+                currentProduct = null;
+                currentProductData = null;
+            } else if (activeHistoryIndex > idx) {
+                activeHistoryIndex -= 1;
+            }
+
+            updateHistoryDisplay();
+            updatePurchaseSection();
+        }
+
         function updatePurchaseSection() {
             if (!currentProduct) {
                 document.getElementById('purchase-section').style.display = 'none';
@@ -1515,7 +1742,13 @@
                 return;
             }
 
-            const puntosNecesarios = currentProduct.puntos || 0;
+            const selectedProducts = scannedProductsHistory.filter(p => selectedHistoryCodes.has(p.codigo));
+            const hasSelected = selectedProducts.length > 0;
+
+            const puntosNecesarios = hasSelected
+                ? selectedProducts.reduce((sum, p) => sum + ((p.puntos || 0) * (typeof p.qty === 'number' ? p.qty : 1)), 0)
+                : (currentProduct.puntos || 0) * (typeof currentProduct.qty === 'number' ? currentProduct.qty : 1);
+
             const reintegro = Math.floor(puntosNecesarios * 0.10); // 10% de reintegro
             
             document.getElementById('reintegro-amount').textContent = reintegro.toLocaleString('es-PY');
@@ -1804,7 +2037,7 @@
             try {
                 if (isMulti) {
                     // Pagar todos los productos seleccionados
-                    const totalPuntos = selectedProducts.reduce((sum, p) => sum + (p.puntos || 0), 0);
+                    const totalPuntos = selectedProducts.reduce((sum, p) => sum + ((p.puntos || 0) * (typeof p.qty === 'number' ? p.qty : 1)), 0);
                     if (userPoints < totalPuntos) {
                         alert(`Puntos insuficientes. Necesitas ${totalPuntos.toLocaleString('es-PY')} puntos, tienes ${userPoints.toLocaleString('es-PY')}`);
                         return;
@@ -1814,21 +2047,24 @@
                     let puntosActuales = userPoints;
 
                     for (const p of selectedProducts) {
-                        const resp = await fetch('/api/purchase', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                product_code: p.codigo,
-                                user_id: userId
-                            })
-                        });
-                        const data = await resp.json();
-                        results.push({ product: p, data });
+                        const qty = typeof p.qty === 'number' ? p.qty : 1;
+                        for (let i = 0; i < qty; i++) {
+                            const resp = await fetch('/api/purchase', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    product_code: p.codigo,
+                                    user_id: userId
+                                })
+                            });
+                            const data = await resp.json();
+                            results.push({ product: p, data });
 
-                        if (data && data.success && data.purchase) {
-                            puntosActuales = data.purchase.puntos_nuevos;
+                            if (data && data.success && data.purchase) {
+                                puntosActuales = data.purchase.puntos_nuevos;
+                            }
                         }
                     }
 
@@ -1856,7 +2092,7 @@
                     alert(
                         `✅ Pagos procesados\n\n` +
                         `Usuario: ${userName}\n` +
-                        `Productos: ${selectedProducts.length}\n` +
+                        `Productos: ${selectedProducts.reduce((sum, p) => sum + (typeof p.qty === 'number' ? p.qty : 1), 0)}\n` +
                         `Éxitos: ${ok}\n` +
                         `Fallos: ${fail}\n` +
                         `Puntos actuales: ${puntosActuales.toLocaleString('es-PY')}\n` +
@@ -1868,54 +2104,65 @@
                     updateHistoryDisplay();
                 } else {
                     // Compra de un solo producto (comportamiento original)
-                    const puntosNecesarios = currentProduct.puntos || 0;
+                    const qty = typeof currentProduct.qty === 'number' ? currentProduct.qty : 1;
+                    const puntosNecesarios = (currentProduct.puntos || 0) * qty;
                     if (userPoints < puntosNecesarios) {
                         alert(`Puntos insuficientes. Necesitas ${puntosNecesarios} puntos, tienes ${userPoints}`);
                         return;
                     }
 
-                    const response = await fetch('/api/purchase', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            product_code: currentProduct.codigo,
-                            user_id: userId
-                        })
-                    });
+                    let puntosActuales = userPoints;
+                    let okCount = 0;
+                    let failCount = 0;
+                    let lastPurchase = null;
 
-                    const data = await response.json();
+                    for (let i = 0; i < qty; i++) {
+                        const response = await fetch('/api/purchase', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                product_code: currentProduct.codigo,
+                                user_id: userId
+                            })
+                        });
 
-                    if (data.success) {
-                        const purchase = data.purchase;
-                        const reintegro = purchase.reintegro;
-                        
-                        // Actualizar usuario con los nuevos puntos
-                        if (currentUser && currentUser.id === userId) {
-                            currentUser.puntos = purchase.puntos_nuevos;
+                        const data = await response.json();
+                        if (data && data.success && data.purchase) {
+                            okCount += 1;
+                            puntosActuales = data.purchase.puntos_nuevos;
+                            lastPurchase = data.purchase;
+                        } else {
+                            failCount += 1;
+                        }
+                    }
+
+                    if (okCount > 0 && lastPurchase) {
+                        if (currentUser && String(currentUser.id) === String(userId)) {
+                            currentUser.puntos = puntosActuales;
                         } else {
                             currentUser = {
                                 id: userId,
                                 nombre: userName,
-                                puntos: purchase.puntos_nuevos
+                                puntos: puntosActuales
                             };
                         }
                         updateUserDisplay();
-                        
-                        // Mostrar mensaje de éxito
-                        alert(`✅ Compra realizada exitosamente!\n\n` +
-                              `Usuario: ${userName}\n` +
-                              `Producto: ${purchase.product}\n` +
-                              `Puntos usados: ${purchase.puntos_usados}\n` +
-                              `Reintegro: +${reintegro} puntos\n` +
-                              `Puntos anteriores: ${purchase.puntos_anteriores}\n` +
-                              `Puntos actuales: ${purchase.puntos_nuevos}`);
-                        
-                        // Actualizar sección de compra con los nuevos puntos
+
+                        alert(
+                            `✅ Compra realizada\n\n` +
+                            `Usuario: ${userName}\n` +
+                            `Producto: ${lastPurchase.product}\n` +
+                            `Cantidad: ${qty}\n` +
+                            `Éxitos: ${okCount}\n` +
+                            `Fallos: ${failCount}\n` +
+                            `Puntos actuales: ${puntosActuales}`
+                        );
+
                         updatePurchaseSection();
                     } else {
-                        alert('Error: ' + data.message);
+                        alert('Error: No se pudo realizar la compra');
                     }
                 }
             } catch (error) {
@@ -1960,8 +2207,7 @@
                 const response = await fetch('/api/user/current');
                 const data = await response.json();
                 if (data.success) {
-                    currentUser = data.user;
-                    updateUserDisplay();
+                    switchActiveUser(data.user);
                 }
             } catch (error) {
                 console.error('Error loading user:', error);
@@ -1970,8 +2216,10 @@
 
         function updateUserDisplay() {
             if (currentUser) {
-                document.getElementById('user-name').textContent = currentUser.nombre;
-                document.getElementById('user-points').textContent = currentUser.puntos.toLocaleString('es-PY');
+                const userNameEl = document.getElementById('user-name');
+                const userPointsEl = document.getElementById('user-points');
+                if (userNameEl) userNameEl.textContent = currentUser.nombre;
+                if (userPointsEl) userPointsEl.textContent = currentUser.puntos.toLocaleString('es-PY');
             }
         }
 
@@ -1985,9 +2233,12 @@
         // Cargar usuario al iniciar
         loadCurrentUser();
         
-        // Inicializar cámara facial al cargar la página
-        initFacialCamera();
+        // Iniciar escáner automáticamente
+        startScanner();
 
+        // Estado inicial del saludo
+        setGreeting(currentUser);
+        
         // Cerrar modal al hacer clic fuera
         document.getElementById('facial-recognition-modal').addEventListener('click', function(e) {
             if (e.target.id === 'facial-recognition-modal') {
@@ -2007,17 +2258,18 @@
         });
 
         // Barcode preview modal functions
-        let currentProductData = null;
 
         function previewLastBarcode() {
-            const code = document.getElementById('last-code').textContent;
+            const lastCodeEl = document.getElementById('last-code');
+            const code = lastCodeEl ? lastCodeEl.textContent : null;
             if (code && code !== '-') {
                 previewBarcode(code);
             }
         }
 
         function previewResultBarcode() {
-            const code = document.getElementById('result-code').textContent;
+            const resultCodeEl = document.getElementById('result-code');
+            const code = resultCodeEl ? resultCodeEl.textContent : null;
             if (code && code !== '-') {
                 previewBarcode(code);
             }
