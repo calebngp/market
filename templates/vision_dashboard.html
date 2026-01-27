@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visión - Market</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --accent: #00d9ff;
+            --accent-glow: rgba(0, 217, 255, 0.3);
+            --accent-secondary: #00ff88;
+            --text-primary: #ffffff;
+            --text-secondary: #8b8b9e;
+            --border: #2a2a3a;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff4757;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(0, 217, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(0, 255, 136, 0.06) 0%, transparent 50%),
+                linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            z-index: -1;
+        }
+
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0, 217, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 217, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: -1;
+        }
+
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 40px;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .nav-brand span {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover { color: var(--accent); }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .page-title h1 {
+            font-size: 2rem;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-title p { color: var(--text-secondary); }
+
+        .btn {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #00a8cc);
+            color: var(--bg-primary);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn-danger {
+            background: rgba(255, 71, 87, 0.12);
+            border: 1px solid rgba(255, 71, 87, 0.35);
+            color: var(--error);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+
+        @media (max-width: 1100px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 18px;
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+        }
+
+        .kv {
+            display: grid;
+            grid-template-columns: 170px 1fr;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+
+        .kv .k { color: var(--text-secondary); }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .events {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .events th {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .events td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .badge-ok { background: rgba(0,255,136,0.12); color: var(--success); border: 1px solid rgba(0,255,136,0.25); }
+        .badge-warn { background: rgba(255,170,0,0.12); color: var(--warning); border: 1px solid rgba(255,170,0,0.25); }
+        .badge-err { background: rgba(255,71,87,0.12); color: var(--error); border: 1px solid rgba(255,71,87,0.25); }
+
+        .status-line {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .small { color: var(--text-secondary); font-size: 0.9rem; }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .input {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            outline: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .row { grid-template-columns: 1fr; }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    <div class="grid-overlay"></div>
+
+    <nav class="navbar">
+        <a href="/" class="nav-brand">
+            <span>🛒 Market</span>
+        </a>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Inicio</a>
+            <a href="/scanner" class="nav-link">Escáner</a>
+            <a href="/inventory" class="nav-link">Inventario</a>
+            <a href="/vision" class="nav-link" style="color: var(--accent);">Visión</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>📷 Dashboard de Visión</h1>
+                <p>Controlá la cámara, consumí eventos PICK y ejecutá el mapping de SKU.</p>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Estado del Servicio</h2>
+                <div class="kv" style="margin-top: 10px;">
+                    <div class="k">Running</div>
+                    <div id="svc-running" class="mono">-</div>
+                    <div class="k">Queued events</div>
+                    <div id="svc-queued" class="mono">-</div>
+                    <div class="k">Last heartbeat</div>
+                    <div id="svc-hb" class="mono">-</div>
+                    <div class="k">Last error</div>
+                    <div id="svc-err" class="mono">-</div>
+                </div>
+
+                <div class="status-line">
+                    <span class="small">Tip: si no tenés OpenCV instalado, el servicio puede no iniciar.</span>
+                </div>
+
+                <div style="height: 14px;"></div>
+
+                <div class="controls">
+                    <button class="btn btn-primary" id="btn-start" type="button" onclick="startService()">▶️ Iniciar</button>
+                    <button class="btn btn-danger" id="btn-stop" type="button" onclick="stopService()">⏹️ Detener</button>
+                    <button class="btn btn-secondary" type="button" onclick="refreshAll()">🔄 Refrescar</button>
+                </div>
+
+                <div style="height: 18px;"></div>
+
+                <h2>Mapping</h2>
+                <div class="row">
+                    <div>
+                        <div class="small" style="margin-bottom: 8px;">Match por</div>
+                        <select id="match-mode" class="input" style="font-family: 'Outfit', sans-serif;">
+                            <option value="sku_id">sku_id (evento → products.sku_id)</option>
+                            <option value="barcode">sku_id==codigo (fallback)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div class="small" style="margin-bottom: 8px;">Auto-mapping</div>
+                        <select id="auto-map" class="input" style="font-family: 'Outfit', sans-serif;">
+                            <option value="1">ON</option>
+                            <option value="0">OFF</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="height: 10px;"></div>
+                <div class="small">El evento trae <span class="mono">sku_id</span>. Se busca el producto en <span class="mono">/api/products</span> por <span class="mono">products.sku_id</span>.</div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex; justify-content: space-between; align-items:center; gap: 12px; flex-wrap: wrap;">
+                    <h2 style="margin: 0;">Eventos PICK</h2>
+                    <div class="small">Se actualiza cada 1s (polling).</div>
+                </div>
+
+                <div style="height: 12px;"></div>
+
+                <div style="overflow-x: auto;">
+                    <table class="events">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>SKU</th>
+                                <th>Producto</th>
+                                <th>Código</th>
+                                <th>Conf</th>
+                                <th>Método</th>
+                            </tr>
+                        </thead>
+                        <tbody id="events-body"></tbody>
+                    </table>
+                </div>
+
+                <div id="events-empty" class="small" style="padding: 14px 0; display: none;">Sin eventos.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let productsCache = [];
+        let pollingId = null;
+
+        function fmtTs(ms) {
+            if (!ms) return '-';
+            try {
+                const d = new Date(ms);
+                return d.toLocaleString('es-PY');
+            } catch (_) {
+                return String(ms);
+            }
+        }
+
+        function setText(id, txt) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = (txt === null || typeof txt === 'undefined') ? '-' : String(txt);
+        }
+
+        async function fetchJson(url, opts) {
+            const resp = await fetch(url, opts);
+            const data = await resp.json();
+            return { ok: resp.ok, data };
+        }
+
+        async function refreshStatus() {
+            const out = await fetchJson('/api/pick/status');
+            if (!out.ok || !out.data.success) {
+                setText('svc-running', 'false');
+                setText('svc-queued', '-');
+                setText('svc-hb', '-');
+                setText('svc-err', out.data && out.data.message ? out.data.message : 'Error');
+                return;
+            }
+
+            const s = out.data.status;
+            setText('svc-running', s.running);
+            setText('svc-queued', s.queued_events);
+            setText('svc-hb', fmtTs(s.last_heartbeat_ms));
+            setText('svc-err', s.last_error || '-');
+
+            const btnStart = document.getElementById('btn-start');
+            const btnStop = document.getElementById('btn-stop');
+            if (btnStart) btnStart.disabled = !!s.running;
+            if (btnStop) btnStop.disabled = !s.running;
+        }
+
+        async function refreshProducts() {
+            const out = await fetchJson('/api/products');
+            if (!out.ok || !out.data.success) {
+                productsCache = [];
+                return;
+            }
+            productsCache = Array.isArray(out.data.products) ? out.data.products : [];
+        }
+
+        function mapEventToProduct(evt) {
+            const mode = document.getElementById('match-mode')?.value || 'sku_id';
+            const sku = evt && evt.sku_id ? String(evt.sku_id) : '';
+            if (!sku) return null;
+
+            if (mode === 'sku_id') {
+                return productsCache.find(p => (p.sku_id ? String(p.sku_id) : '') === sku) || null;
+            }
+
+            if (mode === 'barcode') {
+                return productsCache.find(p => (p.codigo ? String(p.codigo) : '') === sku) || null;
+            }
+
+            return null;
+        }
+
+        function addEventRow(evt) {
+            const tbody = document.getElementById('events-body');
+            if (!tbody) return;
+
+            const tr = document.createElement('tr');
+
+            const product = mapEventToProduct(evt);
+            const mapped = !!product;
+
+            const conf = (typeof evt.confidence === 'number') ? evt.confidence.toFixed(2) : (evt.confidence ?? '-');
+
+            tr.innerHTML = `
+                <td class="mono">${fmtTs(evt.timestamp_ms)}</td>
+                <td class="mono">${evt.sku_id ?? '-'}</td>
+                <td>${mapped ? (product.nombre || '-') : '<span class="badge badge-warn">NO MAP</span>'}</td>
+                <td class="mono">${mapped ? (product.codigo || '-') : '-'}</td>
+                <td class="mono">${conf}</td>
+                <td class="mono">${evt.confirmation_method || '-'}</td>
+            `;
+
+            tbody.prepend(tr);
+
+            while (tbody.children.length > 50) {
+                tbody.removeChild(tbody.lastChild);
+            }
+        }
+
+        async function pollEvents() {
+            const out = await fetchJson('/api/pick/events?limit=50');
+            if (!out.ok || !out.data.success) {
+                return;
+            }
+            const events = Array.isArray(out.data.events) ? out.data.events : [];
+            const empty = document.getElementById('events-empty');
+
+            if (events.length === 0) {
+                if (empty) empty.style.display = (document.getElementById('events-body')?.children?.length ? 'none' : 'block');
+                return;
+            }
+
+            const autoMap = document.getElementById('auto-map')?.value === '1';
+            if (autoMap && productsCache.length === 0) {
+                await refreshProducts();
+            }
+
+            events.forEach(addEventRow);
+            if (empty) empty.style.display = 'none';
+        }
+
+        async function startService() {
+            const out = await fetchJson('/api/pick/start', { method: 'POST' });
+            if (!out.ok || !out.data.success) {
+                alert(out.data && out.data.message ? out.data.message : 'No se pudo iniciar');
+                return;
+            }
+            await refreshStatus();
+        }
+
+        async function stopService() {
+            const out = await fetchJson('/api/pick/stop', { method: 'POST' });
+            if (!out.ok || !out.data.success) {
+                alert(out.data && out.data.message ? out.data.message : 'No se pudo detener');
+                return;
+            }
+            await refreshStatus();
+        }
+
+        async function refreshAll() {
+            await refreshProducts();
+            await refreshStatus();
+            await pollEvents();
+        }
+
+        function startPolling() {
+            if (pollingId) return;
+            pollingId = setInterval(async () => {
+                await refreshStatus();
+                if (document.getElementById('auto-map')?.value === '1') {
+                    await refreshProducts();
+                }
+                await pollEvents();
+            }, 1000);
+        }
+
+        refreshAll();
+        startPolling();
+
+        window.addEventListener('beforeunload', () => {
+            if (pollingId) clearInterval(pollingId);
+            pollingId = null;
+        });
+    </script>
+</body>
+</html>

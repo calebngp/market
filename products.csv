@@ -1,10 +1,10 @@
-codigo,nombre,categoria,precio,pais,proveedor,stock
-1345364,Yerba Mate Kurupi 500g,Bebidas,25000,Paraguay,Proveedor Guaraní S.A.,150
-1322212,Aceite de Oliva Extra Virgen,Alimentos,45000,Paraguay,Distribuidora Mercosur,80
-4511145,Zapatilla Deportiva Nike,Calzado,350000,Argentina,TechPlus Importaciones,25
-5099945,Auriculares Bluetooth JBL,Electrónica,180000,Brasil,TechPlus Importaciones,40
-1311112,Arroz Integral 1kg,Alimentos,15000,Paraguay,Distribuidora Mercosur,200
-4522212,Galletitas Oreo,Alimentos,8500,Argentina,Distribuidora Mercosur,300
-5045345,Café Molido Premium 250g,Bebidas,32000,Brasil,Proveedor Guaraní S.A.,120
-1399945,Leche Entera 1L,Lácteos,12000,Paraguay,Proveedor Guaraní S.A.,500
-1366664,Jamon Serrano,Alimentos,10000,Paraguay,Proveedor Guaraní S.A.,1000
+codigo,nombre,categoria,precio,pais,proveedor,stock,imagen,sku_id
+1345364,Yerba Mate Kurupi 500g,Bebidas,25000,Paraguay,Proveedor Guaraní S.A.,150,,
+1322212,Aceite de Oliva Extra Virgen,Alimentos,45000,Paraguay,Distribuidora Mercosur,80,,
+4511145,Zapatilla Deportiva Nike,Calzado,350000,Argentina,TechPlus Importaciones,25,4511145.jpeg,
+5099945,Auriculares Bluetooth JBL,Electrónica,180000,Brasil,TechPlus Importaciones,40,,
+1311112,Arroz Integral 1kg,Alimentos,15000,Paraguay,Distribuidora Mercosur,200,,
+4522212,Galletitas Oreo,Alimentos,8500,Argentina,Distribuidora Mercosur,300,,
+5045345,Café Molido Premium 250g,Bebidas,32000,Brasil,Proveedor Guaraní S.A.,120,,
+1399945,Leche Entera 1L,Lácteos,12000,Paraguay,Proveedor Guaraní S.A.,500,,
+1366664,Jamon Serrano,Alimentos,10000,Paraguay,Proveedor Guaraní S.A.,1000,,

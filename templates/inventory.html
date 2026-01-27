@@ -735,7 +735,27 @@
                 <button class="modal-close" onclick="closeModal()">✕</button>
             </div>
             <form id="edit-form">
-                <input type="hidden" id="edit-codigo">
+                <input type="hidden" id="edit-codigo-old">
+                <div class="form-group">
+                    <label>Código (Barcode)</label>
+                    <input type="text" id="edit-codigo" required>
+                </div>
+                <div class="form-group">
+                    <label>SKU ID (Mapping para visión)</label>
+                    <input type="text" id="edit-sku-id">
+                </div>
+                <div class="form-group">
+                    <label>Imagen del Producto</label>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <img id="edit-image-preview" src="" alt="" style="width: 96px; height: 96px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-secondary); display: none;" />
+                        <div style="flex: 1; min-width: 220px;">
+                            <input type="file" id="edit-image-file" accept="image/png,image/jpeg,image/webp" style="width: 100%;" />
+                            <div style="margin-top: 10px; display: flex; gap: 10px;">
+                                <button type="button" class="btn btn-secondary" onclick="uploadProductImage()">Subir Imagen</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label>Nombre del Producto</label>
                     <input type="text" id="edit-nombre" required>
@@ -886,11 +906,59 @@
 
             if (data.success) {
                 const product = data.product;
+                document.getElementById('edit-codigo-old').value = product.codigo;
                 document.getElementById('edit-codigo').value = product.codigo;
+                document.getElementById('edit-sku-id').value = product.sku_id || '';
                 document.getElementById('edit-nombre').value = product.nombre;
                 document.getElementById('edit-precio').value = product.precio;
                 document.getElementById('edit-stock').value = product.stock;
+
+                const preview = document.getElementById('edit-image-preview');
+                const fileInput = document.getElementById('edit-image-file');
+                if (fileInput) fileInput.value = '';
+                if (preview) {
+                    if (product.imagen) {
+                        preview.src = `/uploads/product_images/${product.imagen}`;
+                        preview.style.display = 'block';
+                    } else {
+                        preview.removeAttribute('src');
+                        preview.style.display = 'none';
+                    }
+                }
+
                 document.getElementById('edit-modal').classList.add('active');
+            }
+        }
+
+        async function uploadProductImage() {
+            const code = document.getElementById('edit-codigo-old').value;
+            const fileInput = document.getElementById('edit-image-file');
+            if (!code) {
+                alert('Primero selecciona un producto');
+                return;
+            }
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                alert('Selecciona una imagen');
+                return;
+            }
+
+            const form = new FormData();
+            form.append('image', fileInput.files[0]);
+
+            const resp = await fetch(`/api/product/${code}/image`, {
+                method: 'POST',
+                body: form
+            });
+            const result = await resp.json();
+            if (result.success) {
+                const preview = document.getElementById('edit-image-preview');
+                if (preview && result.image_url) {
+                    preview.src = result.image_url + `?t=${Date.now()}`;
+                    preview.style.display = 'block';
+                }
+                alert('Imagen actualizada');
+            } else {
+                alert('Error: ' + result.message);
             }
         }
 
@@ -900,26 +968,42 @@
 
         document.getElementById('edit-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const code = document.getElementById('edit-codigo').value;
+            const oldCode = document.getElementById('edit-codigo-old').value;
+            const newCode = document.getElementById('edit-codigo').value.trim();
             
             const data = {
+                sku_id: document.getElementById('edit-sku-id').value,
                 nombre: document.getElementById('edit-nombre').value,
                 precio: document.getElementById('edit-precio').value,
                 stock: document.getElementById('edit-stock').value
             };
 
-            const response = await fetch(`/api/product/${code}`, {
+            const response = await fetch(`/api/product/${oldCode}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
 
             const result = await response.json();
-            if (result.success) {
-                location.reload();
-            } else {
+            if (!result.success) {
                 alert('Error: ' + result.message);
+                return;
             }
+
+            if (newCode && newCode !== oldCode) {
+                const relinkResp = await fetch('/api/product/relink', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ old_code: oldCode, new_code: newCode })
+                });
+                const relinkResult = await relinkResp.json();
+                if (!relinkResult.success) {
+                    alert('Error: ' + relinkResult.message);
+                    return;
+                }
+            }
+
+            location.reload();
         });
 
         // Delete product

@@ -7,6 +7,8 @@ Servidor Flask con base de datos CSV
 import csv
 import io
 import os
+import threading
+from pathlib import Path
 from flask import Flask, render_template, request, jsonify, make_response
 from facial_recognition import (
     register_user_face,
@@ -15,12 +17,22 @@ from facial_recognition import (
     delete_user_face
 )
 
+try:
+    from vision_pick_service import VisionPickService
+except Exception:  # noqa: BLE001
+    VisionPickService = None
+
 app = Flask(__name__)
+
+_pick_service_lock = threading.Lock()
+_pick_service = None
 
 # Ruta del archivo CSV
 CSV_FILE = 'products.csv'
 USERS_FILE = 'users.csv'
 CARDS_FILE = 'cards.csv'
+
+PRODUCT_IMAGES_DIR = os.path.join('uploads', 'product_images')
 
 # Porcentaje de reintegro en compras (10%)
 REINTEGRO_PORCENTAJE = 10
@@ -183,7 +195,13 @@ def read_products():
 def write_products(products):
     """Escribe los productos al CSV"""
     if products:
-        fieldnames = ['codigo', 'nombre', 'categoria', 'precio', 'pais', 'proveedor', 'stock']
+        base_fields = ['codigo', 'nombre', 'categoria', 'precio', 'pais', 'proveedor', 'stock']
+        extras = set()
+        for p in products:
+            for k in p.keys():
+                if k not in base_fields:
+                    extras.add(k)
+        fieldnames = base_fields + sorted(extras)
         with open(CSV_FILE, 'w', newline='', encoding='utf-8') as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
@@ -245,6 +263,12 @@ def inventory():
     return render_template('inventory.html', products=products)
 
 
+@app.route('/vision')
+def vision_dashboard():
+    """Dashboard para controlar el servicio de visión y ver eventos PICK"""
+    return render_template('vision_dashboard.html')
+
+
 @app.route('/inventory/export')
 def inventory_export():
     products = read_products()
@@ -300,6 +324,69 @@ def cards():
     return render_template('cards.html', entidades_bancarias=ENTIDADES_BANCARIAS)
 
 
+def _get_pick_service():
+    global _pick_service
+    if VisionPickService is None:
+        return None
+    with _pick_service_lock:
+        if _pick_service is None:
+            _pick_service = VisionPickService()
+        return _pick_service
+
+
+@app.route('/api/pick/status')
+def pick_status():
+    svc = _get_pick_service()
+    if svc is None:
+        return jsonify({
+            'success': False,
+            'message': 'VisionPickService no disponible (dependencias faltantes o import falló)'
+        }), 503
+    return jsonify({'success': True, 'status': svc.status()})
+
+
+@app.route('/api/pick/start', methods=['POST'])
+def pick_start():
+    svc = _get_pick_service()
+    if svc is None:
+        return jsonify({
+            'success': False,
+            'message': 'VisionPickService no disponible (dependencias faltantes o import falló)'
+        }), 503
+    svc.start()
+    return jsonify({'success': True, 'status': svc.status()})
+
+
+@app.route('/api/pick/stop', methods=['POST'])
+def pick_stop():
+    svc = _get_pick_service()
+    if svc is None:
+        return jsonify({
+            'success': False,
+            'message': 'VisionPickService no disponible (dependencias faltantes o import falló)'
+        }), 503
+    svc.stop()
+    return jsonify({'success': True, 'status': svc.status()})
+
+
+@app.route('/api/pick/events')
+def pick_events():
+    svc = _get_pick_service()
+    if svc is None:
+        return jsonify({
+            'success': False,
+            'message': 'VisionPickService no disponible (dependencias faltantes o import falló)'
+        }), 503
+
+    try:
+        limit = int(request.args.get('limit', '50'))
+    except ValueError:
+        limit = 50
+
+    events = svc.pop_events(limit=limit)
+    return jsonify({'success': True, 'events': events})
+
+
 @app.route('/api/product/<code>')
 def get_product(code):
     """API para obtener un producto por código"""
@@ -318,6 +405,124 @@ def get_product(code):
     return jsonify({
         'success': False,
         'message': 'Producto no encontrado'
+    })
+
+
+@app.route('/api/product/<code>/image', methods=['POST'])
+def upload_product_image(code):
+    """Sube una imagen y la asocia a un producto (guarda ruta en products.csv)"""
+    if 'image' not in request.files:
+        return jsonify({
+            'success': False,
+            'message': 'Se requiere el archivo image'
+        })
+
+    image = request.files['image']
+    if not image or not image.filename:
+        return jsonify({
+            'success': False,
+            'message': 'Archivo inválido'
+        })
+
+    products = read_products()
+    product = next((p for p in products if p.get('codigo') == code), None)
+    if not product:
+        return jsonify({
+            'success': False,
+            'message': 'Producto no encontrado'
+        })
+
+    ext = Path(image.filename).suffix.lower()
+    if ext not in {'.jpg', '.jpeg', '.png', '.webp'}:
+        return jsonify({
+            'success': False,
+            'message': 'Formato no soportado (usar jpg, png, webp)'
+        })
+
+    os.makedirs(PRODUCT_IMAGES_DIR, exist_ok=True)
+    filename = f"{code}{ext}"
+    save_path = os.path.join(PRODUCT_IMAGES_DIR, filename)
+    image.save(save_path)
+
+    product['imagen'] = filename
+    write_products(products)
+
+    return jsonify({
+        'success': True,
+        'message': 'Imagen actualizada',
+        'image_filename': filename,
+        'image_url': f"/uploads/product_images/{filename}"
+    })
+
+
+@app.route('/uploads/product_images/<path:filename>')
+def serve_product_image(filename):
+    from flask import send_from_directory
+
+    return send_from_directory(PRODUCT_IMAGES_DIR, filename)
+
+
+@app.route('/api/product/relink', methods=['POST'])
+def relink_product_code():
+    """API para cambiar el código (barcode) de un producto existente"""
+    data = request.json or {}
+    old_code = (data.get('old_code') or '').strip()
+    new_code = (data.get('new_code') or '').strip()
+
+    if not old_code or not new_code:
+        return jsonify({
+            'success': False,
+            'message': 'old_code y new_code son requeridos'
+        })
+
+    if old_code == new_code:
+        return jsonify({
+            'success': True,
+            'message': 'Sin cambios'
+        })
+
+    products = read_products()
+
+    if any(p.get('codigo') == new_code for p in products):
+        return jsonify({
+            'success': False,
+            'message': 'Ya existe un producto con el nuevo código'
+        })
+
+    updated = False
+    for i, product in enumerate(products):
+        if product.get('codigo') == old_code:
+            products[i]['codigo'] = new_code
+
+            image_filename = product.get('imagen')
+            if image_filename:
+                old_path = os.path.join(PRODUCT_IMAGES_DIR, image_filename)
+                old_ext = Path(image_filename).suffix.lower()
+                if old_ext and os.path.exists(old_path):
+                    new_filename = f"{new_code}{old_ext}"
+                    new_path = os.path.join(PRODUCT_IMAGES_DIR, new_filename)
+                    if not os.path.exists(new_path):
+                        try:
+                            os.rename(old_path, new_path)
+                            products[i]['imagen'] = new_filename
+                        except OSError:
+                            pass
+
+            updated = True
+            break
+
+    if not updated:
+        return jsonify({
+            'success': False,
+            'message': 'Producto no encontrado'
+        })
+
+    write_products(products)
+    return jsonify({
+        'success': True,
+        'message': 'Código actualizado',
+        'old_code': old_code,
+        'new_code': new_code
     })
 
 
