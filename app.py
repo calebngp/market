@@ -85,12 +85,13 @@ def init_users_file():
     """Inicializa el archivo de usuarios con el usuario por defecto"""
     if not os.path.exists(USERS_FILE):
         with open(USERS_FILE, 'w', newline='', encoding='utf-8') as file:
-            writer = csv.DictWriter(file, fieldnames=['id', 'nombre', 'puntos'])
+            writer = csv.DictWriter(file, fieldnames=['id', 'nombre', 'puntos', 'compras'])
             writer.writeheader()
             writer.writerow({
                 'id': '1',
                 'nombre': 'Caleb Medina',
-                'puntos': '1000'
+                'puntos': '1000',
+                'compras': '0'
             })
 
 
@@ -151,7 +152,7 @@ def read_users():
 def write_users(users):
     """Escribe los usuarios al CSV"""
     if users:
-        fieldnames = ['id', 'nombre', 'puntos']
+        fieldnames = ['id', 'nombre', 'puntos', 'compras']
         with open(USERS_FILE, 'w', newline='', encoding='utf-8') as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
@@ -709,6 +710,37 @@ def recognize_or_create_user():
     })
 
 
+def get_or_create_user(user_id):
+    """Obtiene un usuario por ID o crea uno nuevo si no existe"""
+    users = read_users()
+    
+    # Buscar usuario existente
+    user = next((u for u in users if u['id'] == user_id), None)
+    
+    if user:
+        return user, False
+    
+    # Si no existe, crear nuevo usuario
+    if users:
+        max_id = max(int(u['id']) for u in users)
+        new_id = str(max_id + 1)
+    else:
+        new_id = '1'
+    
+    # Crear usuario por defecto
+    new_user = {
+        'id': new_id,
+        'nombre': f'Usuario {new_id}',
+        'puntos': '1000',
+        'compras': '0'
+    }
+    
+    users.append(new_user)
+    write_users(users)
+    
+    return new_user, True
+
+
 @app.route('/api/purchase', methods=['POST'])
 def purchase_with_points():
     """API para comprar un producto usando puntos con user_id"""
@@ -738,15 +770,8 @@ def purchase_with_points():
     # Calcular puntos necesarios
     puntos_necesarios = calculate_product_points(product['precio'])
     
-    # Obtener usuario por ID
-    users = read_users()
-    user = next((u for u in users if u['id'] == data['user_id']), None)
-    
-    if not user:
-        return jsonify({
-            'success': False,
-            'message': 'Usuario no encontrado'
-        })
+    # Obtener o crear usuario por ID
+    user, user_created = get_or_create_user(data['user_id'])
     
     puntos_actuales = int(user['puntos'])
     
@@ -763,14 +788,20 @@ def purchase_with_points():
     # Actualizar puntos del usuario
     nuevos_puntos = puntos_actuales - puntos_necesarios + reintegro
     
+    # Incrementar contador de compras
+    compras_actuales = int(user.get('compras') or 0)
+    nuevas_compras = compras_actuales + 1
+    
+    users = read_users()
     for i, u in enumerate(users):
         if u['id'] == user['id']:
             users[i]['puntos'] = str(nuevos_puntos)
+            users[i]['compras'] = str(nuevas_compras)
             break
     
     write_users(users)
     
-    return jsonify({
+    response_data = {
         'success': True,
         'message': 'Compra realizada exitosamente',
         'purchase': {
@@ -779,8 +810,21 @@ def purchase_with_points():
             'reintegro': reintegro,
             'puntos_anteriores': puntos_actuales,
             'puntos_nuevos': nuevos_puntos
+        },
+        'user': {
+            'id': user['id'],
+            'nombre': user['nombre'],
+            'puntos': nuevos_puntos,
+            'compras': nuevas_compras
         }
-    })
+    }
+    
+    # Agregar información de si el usuario fue creado
+    if user_created:
+        response_data['user_created'] = True
+        response_data['message'] = f'Usuario {user["nombre"]} registrado y compra realizada exitosamente'
+    
+    return jsonify(response_data)
 
 
 @app.route('/api/facial/register', methods=['POST'])
@@ -967,6 +1011,81 @@ def delete_user(user_id):
     return jsonify({
         'success': True,
         'message': 'Usuario eliminado exitosamente'
+    })
+
+
+@app.route('/api/user/<user_id>/check-default-name')
+def check_default_name(user_id):
+    """API para verificar si un usuario tiene nombre por defecto"""
+    users = read_users()
+    user = next((u for u in users if u['id'] == user_id), None)
+    
+    if not user:
+        return jsonify({
+            'success': False,
+            'message': 'Usuario no encontrado'
+        })
+    
+    # Verificar si el nombre sigue el patrón por defecto "Usuario {ID}"
+    is_default = user['nombre'] == f'Usuario {user_id}'
+    
+    return jsonify({
+        'success': True,
+        'is_default_name': is_default,
+        'user': {
+            'id': user['id'],
+            'nombre': user['nombre'],
+            'puntos': int(user['puntos']),
+            'compras': int(user.get('compras') or 0)
+        }
+    })
+
+
+@app.route('/api/user/<user_id>/update-name', methods=['POST'])
+def update_user_name(user_id):
+    """API para actualizar el nombre de un usuario"""
+    data = request.json
+    
+    if 'nombre' not in data or not data['nombre'].strip():
+        return jsonify({
+            'success': False,
+            'message': 'El nombre es requerido'
+        })
+    
+    new_name = data['nombre'].strip()
+    users = read_users()
+    
+    user_found = False
+    for i, user in enumerate(users):
+        if user['id'] == user_id:
+            # Verificar que el nombre no esté duplicado
+            if any(u['nombre'].lower() == new_name.lower() and u['id'] != user_id for u in users):
+                return jsonify({
+                    'success': False,
+                    'message': 'Ya existe otro usuario con ese nombre'
+                })
+            
+            users[i]['nombre'] = new_name
+            user_found = True
+            break
+    
+    if not user_found:
+        return jsonify({
+            'success': False,
+            'message': 'Usuario no encontrado'
+        })
+    
+    write_users(users)
+    
+    return jsonify({
+        'success': True,
+        'message': 'Nombre actualizado exitosamente',
+        'user': {
+            'id': user_id,
+            'nombre': new_name,
+            'puntos': int(users[i]['puntos']),
+            'compras': int(users[i].get('compras') or 0)
+        }
     })
 
 

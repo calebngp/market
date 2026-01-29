@@ -541,6 +541,93 @@
             border-top: 1px solid var(--border);
         }
 
+        /* Purchased Products History */
+        .purchased-products-history {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid var(--border);
+        }
+
+        .purchased-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .purchased-item {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 217, 255, 0.05));
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            position: relative;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            opacity: 0.8;
+        }
+
+        .purchased-item .purchase-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--success);
+            color: var(--bg-primary);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .purchased-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .purchased-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .purchased-item-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .purchased-item-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+
+        .purchased-item-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+
+        .purchased-item-price {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .purchased-item-points {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .purchased-item-time {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-align: right;
+        }
+
         .history-header {
             display: flex;
             justify-content: space-between;
@@ -1011,6 +1098,28 @@
             background: rgba(255, 255, 255, 0.04);
             color: var(--text-secondary);
         }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1115,6 +1224,19 @@
                             <!-- History items will be added here -->
                         </div>
                     </div>
+                    
+                    <!-- Purchased Products Section -->
+                    <div class="purchased-products-history" id="purchased-section" style="display: none;">
+                        <div class="history-header">
+                            <h3>✅ Productos Comprados</h3>
+                            <div class="history-actions">
+                                <!-- Botón de limpiar eliminado para proteger el historial de compras -->
+                            </div>
+                        </div>
+                        <div class="purchased-list" id="purchased-list">
+                            <!-- Purchased items will be added here -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1187,6 +1309,47 @@
         </div>
     </div>
 
+    <!-- Modal de Registro de Nombre -->
+    <div class="modal-overlay" id="name-registration-modal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>👤 ¿Quieres registrar tu nombre?</h3>
+                <button class="close-modal" onclick="closeNameRegistrationModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="name-registration-info" style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">👤</div>
+                    <h3 id="name-registration-current-name" style="font-size: 1.5rem; margin-bottom: 10px;"></h3>
+                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                        <p style="color: var(--text-secondary); margin-bottom: 5px;">Puntos disponibles</p>
+                        <p style="font-size: 2rem; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono', monospace;" id="name-registration-points"></p>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                        ¡Esta es tu 3ra compra con nosotros! ¿Quieres registrar tu nombre para futuras compras?
+                    </p>
+                </div>
+                <div id="name-registration-form" style="display: none;">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 0.9rem;">Tu nombre:</label>
+                        <input type="text" id="new-user-name" placeholder="Ingresa tu nombre" 
+                               style="width: 100%; padding: 12px 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; color: var(--text-primary); font-family: 'Outfit', sans-serif; font-size: 1rem; outline: none;">
+                    </div>
+                </div>
+                <div id="name-registration-error" style="display: none; text-align: center; color: var(--error); padding: 15px; background: rgba(255, 71, 87, 0.1); border-radius: 10px; margin-bottom: 20px;">
+                    <p id="name-registration-error-message"></p>
+                </div>
+            </div>
+            <div class="modal-actions" id="name-registration-actions">
+                <button type="button" class="btn-modal btn-modal-secondary" onclick="continueAsGuest()">Continuar como Invitado</button>
+                <button type="button" class="btn-modal btn-modal-primary" onclick="showNameForm()">Registrar Nombre</button>
+            </div>
+            <div class="modal-actions" id="name-registration-form-actions" style="display: none;">
+                <button type="button" class="btn-modal btn-modal-secondary" onclick="backToNamePrompt()">Cancelar</button>
+                <button type="button" class="btn-modal btn-modal-primary" onclick="saveUserName()">Guardar Nombre</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let html5QrCode = null;
         let isScanning = false;
@@ -1196,6 +1359,7 @@
         let currentProduct = null;
         let currentProductData = null;
         let scannedProductsHistory = [];
+        let purchasedProductsHistory = [];
         let activeHistoryIndex = -1;
         let selectedHistoryCodes = new Set();
         let facialStream = null;
@@ -1295,6 +1459,7 @@
             const key = currentUserKey || 'guest';
             userCartStates.set(key, {
                 scannedProductsHistory: Array.isArray(scannedProductsHistory) ? [...scannedProductsHistory] : [],
+                purchasedProductsHistory: Array.isArray(purchasedProductsHistory) ? [...purchasedProductsHistory] : [],
                 activeHistoryIndex: typeof activeHistoryIndex === 'number' ? activeHistoryIndex : -1,
                 selectedHistoryCodes: new Set(Array.from(selectedHistoryCodes || [])),
                 currentProduct: currentProduct ? { ...currentProduct } : null,
@@ -1305,12 +1470,14 @@
         function loadCartStateForKey(key) {
             const state = userCartStates.get(key);
             scannedProductsHistory = state && state.scannedProductsHistory ? [...state.scannedProductsHistory] : [];
+            purchasedProductsHistory = state && state.purchasedProductsHistory ? [...state.purchasedProductsHistory] : [];
             activeHistoryIndex = state && typeof state.activeHistoryIndex === 'number' ? state.activeHistoryIndex : -1;
             selectedHistoryCodes = state && state.selectedHistoryCodes ? new Set(Array.from(state.selectedHistoryCodes)) : new Set();
             currentProduct = state ? state.currentProduct : null;
             currentProductData = state ? state.currentProductData : null;
 
             updateHistoryDisplay();
+            updatePurchasedDisplay();
             updatePurchaseSection();
 
             if (currentProduct) {
@@ -1600,44 +1767,97 @@
             
             if (scannedProductsHistory.length === 0) {
                 historySection.style.display = 'none';
-                return;
+            } else {
+                historySection.style.display = 'block';
+                historyList.innerHTML = '';
+                
+                scannedProductsHistory.forEach((product, index) => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = `history-item ${index === activeHistoryIndex ? 'active' : ''}`;
+                    historyItem.onclick = () => viewHistoryProduct(index);
+                    
+                    const checked = selectedHistoryCodes.has(product.codigo);
+                    const qty = product && typeof product.qty === 'number' ? product.qty : 1;
+                    historyItem.innerHTML = `
+                        <div class="history-item-checkbox" onclick="event.stopPropagation()">
+                            <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleHistorySelection(event, '${product.codigo}')">
+                        </div>
+                        <div class="history-item-content">
+                            <div class="history-item-header">
+                                <div class="history-item-name">${product.nombre}</div>
+                                <div class="history-item-code">${product.codigo}</div>
+                            </div>
+                            <div class="history-item-details">
+                                <div class="history-item-price">₲ ${formatNumber(product.precio)}</div>
+                                <div class="history-item-points">⭐ ${(product.puntos || 0).toLocaleString('es-PY')} pts</div>
+                                <div class="qty-controls" onclick="event.stopPropagation()">
+                                    <span class="qty-value">x${qty}</span>
+                                </div>
+                                <button type="button" class="delete-item-btn" onclick="removeCartItem('${product.codigo}'); event.stopPropagation();">🗑</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    historyList.appendChild(historyItem);
+                });
+
+                syncSelectAllCheckbox();
+                updateBulkActionsUI();
+            }
+        }
+
+        function updatePurchasedDisplay() {
+            const purchasedList = document.getElementById('purchased-list');
+            const purchasedSection = document.getElementById('purchased-section');
+            
+            if (purchasedProductsHistory.length === 0) {
+                purchasedSection.style.display = 'none';
+            } else {
+                purchasedSection.style.display = 'block';
+                purchasedList.innerHTML = '';
+                
+                purchasedProductsHistory.forEach((product, index) => {
+                    const purchasedItem = document.createElement('div');
+                    purchasedItem.className = 'purchased-item';
+                    
+                    const qty = product && typeof product.qty === 'number' ? product.qty : 1;
+                    purchasedItem.innerHTML = `
+                        <div class="purchase-badge">Comprado</div>
+                        <div class="purchased-item-content">
+                            <div class="purchased-item-header">
+                                <div class="purchased-item-name">${product.nombre}</div>
+                                <div class="purchased-item-code">${product.codigo}</div>
+                            </div>
+                            <div class="purchased-item-details">
+                                <div class="purchased-item-price">₲ ${formatNumber(product.precio)}</div>
+                                <div class="purchased-item-points">⭐ ${(product.puntos || 0).toLocaleString('es-PY')} pts</div>
+                                <div class="purchased-item-time">${product.purchasedAt || new Date().toLocaleTimeString('es-PY')}</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    purchasedList.appendChild(purchasedItem);
+                });
+            }
+        }
+
+        function moveToPurchased(products) {
+            const now = new Date().toLocaleTimeString('es-PY');
+            products.forEach(product => {
+                const purchasedItem = {
+                    ...product,
+                    purchasedAt: now,
+                    originalScannedAt: product.scannedAt
+                };
+                purchasedProductsHistory.unshift(purchasedItem);
+            });
+            
+            // Limit purchased history to 50 items
+            if (purchasedProductsHistory.length > 50) {
+                purchasedProductsHistory = purchasedProductsHistory.slice(0, 50);
             }
             
-            historySection.style.display = 'block';
-            historyList.innerHTML = '';
-            
-            scannedProductsHistory.forEach((product, index) => {
-                const historyItem = document.createElement('div');
-                historyItem.className = `history-item ${index === activeHistoryIndex ? 'active' : ''}`;
-                historyItem.onclick = () => viewHistoryProduct(index);
-                
-                const checked = selectedHistoryCodes.has(product.codigo);
-                const qty = product && typeof product.qty === 'number' ? product.qty : 1;
-                historyItem.innerHTML = `
-                    <div class="history-item-checkbox" onclick="event.stopPropagation()">
-                        <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleHistorySelection(event, '${product.codigo}')">
-                    </div>
-                    <div class="history-item-content">
-                        <div class="history-item-header">
-                            <div class="history-item-name">${product.nombre}</div>
-                            <div class="history-item-code">${product.codigo}</div>
-                        </div>
-                        <div class="history-item-details">
-                            <div class="history-item-price">₲ ${formatNumber(product.precio)}</div>
-                            <div class="history-item-points">⭐ ${(product.puntos || 0).toLocaleString('es-PY')} pts</div>
-                            <div class="qty-controls" onclick="event.stopPropagation()">
-                                <span class="qty-value">x${qty}</span>
-                            </div>
-                            <button type="button" class="delete-item-btn" onclick="removeCartItem('${product.codigo}'); event.stopPropagation();">🗑</button>
-                        </div>
-                    </div>
-                `;
-                
-                historyList.appendChild(historyItem);
-            });
-
-            syncSelectAllCheckbox();
-            updateBulkActionsUI();
+            updatePurchasedDisplay();
         }
 
         function toggleHistorySelection(e, code) {
@@ -1704,6 +1924,7 @@
                 activeHistoryIndex = -1;
                 selectedHistoryCodes.clear();
                 updateHistoryDisplay();
+                updatePurchaseSection();
             }
         }
 
@@ -1985,21 +2206,152 @@
                 puntos: user.puntos
             };
             
-            // Actualizar la visualización del usuario en la interfaz
-            updateUserDisplay();
-            
-            // Actualizar la sección de compra con el nuevo usuario
-            updatePurchaseSection();
+            // Verificar si el usuario tiene nombre por defecto y mostrar modal de registro
+            checkAndShowNameRegistration(user);
+        }
 
-            // Habilitar o deshabilitar botón según puntos
-            const confirmBtn = document.getElementById('confirm-purchase-btn');
-            if (user.puntos >= (product.puntos || 0)) {
-                confirmBtn.disabled = false;
-                confirmBtn.style.opacity = '1';
-            } else {
-                confirmBtn.disabled = true;
-                confirmBtn.style.opacity = '0.5';
+        // Funciones para el registro de nombre
+        async function checkAndShowNameRegistration(user) {
+            try {
+                const response = await fetch(`/api/user/${user.id}/check-default-name`);
+                const data = await response.json();
+                
+                if (data.success && data.is_default_name && data.user.compras >= 2) {
+                    // Mostrar modal de registro de nombre solo en la tercera compra o superior
+                    showNameRegistrationModal(data.user);
+                }
+            } catch (error) {
+                console.error('Error al verificar nombre de usuario:', error);
             }
+        }
+
+        function showNameRegistrationModal(user) {
+            document.getElementById('name-registration-current-name').textContent = user.nombre;
+            document.getElementById('name-registration-points').textContent = user.puntos.toLocaleString('es-PY');
+            document.getElementById('name-registration-modal').classList.add('active');
+            
+            // Guardar referencia al usuario para uso posterior
+            window.pendingUser = user;
+        }
+
+        function closeNameRegistrationModal() {
+            document.getElementById('name-registration-modal').classList.remove('active');
+            document.getElementById('name-registration-form').style.display = 'none';
+            document.getElementById('name-registration-actions').style.display = 'flex';
+            document.getElementById('name-registration-form-actions').style.display = 'none';
+            document.getElementById('name-registration-error').style.display = 'none';
+            document.getElementById('new-user-name').value = '';
+            
+            // Limpiar error
+            hideNameRegistrationError();
+        }
+
+        function showNameForm() {
+            document.getElementById('name-registration-info').style.display = 'none';
+            document.getElementById('name-registration-form').style.display = 'block';
+            document.getElementById('name-registration-actions').style.display = 'none';
+            document.getElementById('name-registration-form-actions').style.display = 'flex';
+            
+            // Enfocar el input
+            setTimeout(() => {
+                document.getElementById('new-user-name').focus();
+            }, 100);
+        }
+
+        function backToNamePrompt() {
+            document.getElementById('name-registration-info').style.display = 'block';
+            document.getElementById('name-registration-form').style.display = 'none';
+            document.getElementById('name-registration-actions').style.display = 'flex';
+            document.getElementById('name-registration-form-actions').style.display = 'none';
+            document.getElementById('new-user-name').value = '';
+            hideNameRegistrationError();
+        }
+
+        function continueAsGuest() {
+            closeNameRegistrationModal();
+        }
+
+        async function saveUserName() {
+            const newName = document.getElementById('new-user-name').value.trim();
+            
+            if (!newName) {
+                showNameRegistrationError('Por favor, ingresa tu nombre');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/user/${window.pendingUser.id}/update-name`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nombre: newName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Actualizar el usuario actual
+                    currentUser = data.user;
+                    recognizedUserData.user = data.user;
+                    
+                    // Actualizar la información en el modal de reconocimiento facial
+                    document.getElementById('facial-user-name').textContent = data.user.nombre;
+                    
+                    // Actualizar botón attributes
+                    const btn = document.getElementById('confirm-purchase-btn');
+                    if (btn) {
+                        btn.setAttribute('data-user-name', data.user.nombre);
+                    }
+                    
+                    closeNameRegistrationModal();
+                    
+                    // Mostrar mensaje de éxito
+                    showNameRegistrationSuccess('¡Nombre registrado exitosamente!');
+                } else {
+                    showNameRegistrationError(data.message || 'Error al actualizar el nombre');
+                }
+            } catch (error) {
+                console.error('Error al guardar nombre:', error);
+                showNameRegistrationError('Ocurrió un error al guardar tu nombre');
+            }
+        }
+
+        function showNameRegistrationError(message) {
+            document.getElementById('name-registration-error-message').textContent = message;
+            document.getElementById('name-registration-error').style.display = 'block';
+        }
+
+        function hideNameRegistrationError() {
+            document.getElementById('name-registration-error').style.display = 'none';
+        }
+
+        function showNameRegistrationSuccess(message) {
+            // Crear un toast o notificación temporal
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, var(--success), #00cc6a);
+                color: var(--bg-primary);
+                padding: 15px 20px;
+                border-radius: 12px;
+                font-weight: 500;
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
         }
 
         function showFacialError(message) {
@@ -2099,6 +2451,32 @@
                         (fail > 0 ? `\nDetalles (máx 5):\n${failLines}` : '')
                     );
 
+                    // Mover productos comprados a la sección de comprados
+                    const successfulProducts = results
+                        .filter(r => r.data && r.data.success)
+                        .map(r => r.product);
+                    
+                    if (successfulProducts.length > 0) {
+                        moveToPurchased(successfulProducts);
+                        
+                        // Remover productos comprados del carrito
+                        successfulProducts.forEach(purchasedProduct => {
+                            const idx = scannedProductsHistory.findIndex(p => p.codigo === purchasedProduct.codigo);
+                            if (idx !== -1) {
+                                scannedProductsHistory.splice(idx, 1);
+                                selectedHistoryCodes.delete(purchasedProduct.codigo);
+                                if (activeHistoryIndex === idx) {
+                                    activeHistoryIndex = -1;
+                                    currentProduct = null;
+                                    currentProductData = null;
+                                } else if (activeHistoryIndex > idx) {
+                                    activeHistoryIndex -= 1;
+                                }
+                            }
+                        });
+                        updateHistoryDisplay();
+                    }
+
                     // Limpiar selección después de pagar
                     selectedHistoryCodes.clear();
                     updateHistoryDisplay();
@@ -2159,6 +2537,27 @@
                             `Fallos: ${failCount}\n` +
                             `Puntos actuales: ${puntosActuales}`
                         );
+
+                        // Mover producto comprado a la sección de comprados
+                        if (okCount > 0) {
+                            const purchasedProduct = { ...currentProduct, qty: okCount };
+                            moveToPurchased([purchasedProduct]);
+                            
+                            // Remover del carrito
+                            const idx = scannedProductsHistory.findIndex(p => p.codigo === currentProduct.codigo);
+                            if (idx !== -1) {
+                                scannedProductsHistory.splice(idx, 1);
+                                selectedHistoryCodes.delete(currentProduct.codigo);
+                                if (activeHistoryIndex === idx) {
+                                    activeHistoryIndex = -1;
+                                    currentProduct = null;
+                                    currentProductData = null;
+                                } else if (activeHistoryIndex > idx) {
+                                    activeHistoryIndex -= 1;
+                                }
+                            }
+                            updateHistoryDisplay();
+                        }
 
                         updatePurchaseSection();
                     } else {
